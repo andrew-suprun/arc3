@@ -69,7 +69,8 @@ func (m *model) folderView(folder *folder) {
 	m.text(state+kind+document+date+size, 231, 8, bold)
 
 	lines := m.screenSize.Height - 4
-	if folder.offsetIdx > len(folder.children)+1-lines {
+	m.fileTreeLines = lines
+	if folder.offsetIdx > len(folder.children)+len(folder.files)+1-lines {
 		folder.offsetIdx = len(entries) + 1 - lines
 	}
 	if folder.offsetIdx < 0 {
