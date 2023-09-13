@@ -188,6 +188,10 @@ var origin = []*fileMeta{
 			}},
 		}},
 	}},
+	{name: "b", hash: "0001"},
+	{name: "d", hash: "0002"},
+	{name: "e", hash: "0003"},
+	{name: "f", hash: "0004"},
 }
 var copy1 = []*fileMeta{
 	{name: "a", children: []*fileMeta{

@@ -115,6 +115,9 @@ func (m *model) handleEvent(msg *parser.Message) {
 		m.sendToUi("stopped")
 		m.quit = true
 
+	case "key":
+		m.handleKey(msg.StringValue("name"))
+
 	default:
 		log.Debug("UNKNOWN event type", "msg", msg)
 		panic(fmt.Sprintf("UNKNOWN event type %q", msg.Type))

@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"arc/log"
 	"fmt"
 	"math"
 	"path/filepath"
@@ -60,7 +59,6 @@ func (m *model) breadcrumbs() {
 
 func (m *model) folderView(folder *folder) {
 	entries := folder.entries()
-	log.Debug("entries", "len", len(entries))
 	sizes := calcSizes(m.screenSize.Width, c{size: 10}, c{size: 3}, c{size: 20, flex: 1}, c{size: 19}, c{size: 22})
 	m.pos(0, 2)
 	state := text(" State", sizes[0])
@@ -87,7 +85,6 @@ func (m *model) folderView(folder *folder) {
 			flags = reverse
 		}
 		row := m.fileRow(entry, sizes)
-		log.Debug("folderView", "state", m.curArchive.state)
 		m.pos(0, i+3)
 		m.text(row, entry.statusFgColor(), 17, flags)
 	}
@@ -101,7 +98,6 @@ func (m *model) folderView(folder *folder) {
 func (m *model) fileRow(entry *entry, sizes []int) string {
 	buf := &strings.Builder{}
 	buf.WriteString(entry.stateText(sizes[0]))
-	log.Debug("entryRow", "text.1", buf.String())
 
 	switch entry.kind {
 	case kindRegular:
@@ -109,14 +105,10 @@ func (m *model) fileRow(entry *entry, sizes []int) string {
 	case kindFolder:
 		buf.WriteString(text(" ▶ ", sizes[1]))
 	}
-	log.Debug("entryRow", "text.2", buf.String())
 
 	buf.WriteString(text("  "+entry.name, sizes[2]))
-	log.Debug("entryRow", "text.3", buf.String())
 	buf.WriteString(text("  "+entry.modTime.Format(time.DateTime), sizes[3]))
-	log.Debug("entryRow", "text.4", buf.String())
 	buf.WriteString(text("  "+formatSize(entry.size), sizes[4]))
-	log.Debug("entryRow", "text.5", buf.String())
 
 	return buf.String()
 }
