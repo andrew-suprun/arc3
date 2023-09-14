@@ -26,7 +26,17 @@ func (m *model) handleKey(name string) {
 		folder.moveSelection(m.fileTreeLines)
 
 	case "Home":
+		folder := m.curArchive.curFolder
+		folder.selectedName = ""
+		folder.selectedIdx = 0
+		m.makeSelectedVisible = true
+
 	case "End":
+		folder := m.curArchive.curFolder
+		folder.selectedName = ""
+		folder.selectedIdx = len(folder.children) + len(folder.files) - 1
+		m.makeSelectedVisible = true
+
 	case "Left":
 		archive := m.curArchive
 		parent := archive.curFolder.parent
