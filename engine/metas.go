@@ -1,19 +1,19 @@
 package engine
 
 import (
-	"arc/log"
 	"time"
 )
 
-func (c *model) updateMetas(folder *folder) {
-	log.Debug("updateMetas", "name", folder.name)
+func (m *model) updateMetas(folder *folder) {
 	folder.size = 0
 	folder.modTime = time.Time{}
 	folder.state = resolved
 
-	for _, childIdx := range folder.children {
-		c.updateMetas(childIdx)
+	for _, child := range folder.children {
+		m.updateMetas(child)
+		updateMeta(folder, &child.meta)
 	}
+
 	for _, file := range folder.files {
 		updateMeta(folder, &file.meta)
 	}

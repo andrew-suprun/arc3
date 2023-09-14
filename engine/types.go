@@ -2,7 +2,9 @@ package engine
 
 import (
 	r "arc/renderer"
+	"fmt"
 	"io"
+	"path/filepath"
 	"time"
 )
 
@@ -77,22 +79,36 @@ type (
 
 	state int
 
-	builder struct {
-		width  int
-		height int
-		out    io.Writer
-	}
-
-	pos struct {
-		x, y int
-	}
-
-	style struct {
-		fg, bg, flags byte
-	}
-
 	sortColumn int
 )
+
+func (m *meta) String() string {
+	return fmt.Sprintf("meta{ root=%q, folder=%q, name=%q, size=%d, mod-time=%s, state=%s, progress=%d }",
+		m.root, filepath.Join(m.parent.path()...), m.name, m.size, m.modTime.Format(time.RFC3339), m.state, m.progress)
+}
+
+func (f *file) String() string {
+	return fmt.Sprintf("file{ meta=%s, hash=%q, counts=%v }", &f.meta, f.hash, f.counts)
+}
+
+func (f *folder) String() string {
+	return fmt.Sprintf("folder{ meta=%s, selected-name=%q, selected-idx=%d }", &f.meta, f.selectedName, f.selectedIdx)
+}
+
+func (e *entry) String() string {
+	return fmt.Sprintf("entry{ kind=%s, name=%q, size=%d, mod-time=%s, state=%s, progress=%d, counts=%v, selected=%v }",
+		e.kind, e.name, e.size, e.modTime.Format(time.RFC3339), e.state, e.progress, e.counts, e.selected)
+}
+
+func (k kind) String() string {
+	switch k {
+	case kindRegular:
+		return "Regular"
+	case kindFolder:
+		return "Folder"
+	}
+	return ""
+}
 
 const (
 	kindRegular kind = iota

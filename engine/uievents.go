@@ -71,6 +71,17 @@ func (m *model) handleKey(name string) {
 		fileName := filepath.Join(archive.root, path, folder.selectedName)
 		exec.Command("open", "-R", fileName).Start()
 
+	case "Tab":
+		m.tab()
+
+	case "Ctrl+R": // Resolve
+
+	case "Ctrl+A": // Resolve All
+
+	case "Backspace2": // Ctrl+Delete
+
+	case "F12": // Debug
+
 	case "Ctrl+C":
 		m.sendToFs("stop")
 	}
@@ -79,4 +90,8 @@ func (m *model) handleKey(name string) {
 func (f *folder) moveSelection(lines int) {
 	f.selectedName = ""
 	f.selectedIdx += lines
+}
+
+func (m *model) tab() {
+	// TODO
 }

@@ -17,6 +17,7 @@ func (m *model) render() {
 		m.show()
 		return
 	}
+	m.updateMetas(m.curArchive.curFolder)
 	m.showTitle()
 	m.breadcrumbs()
 	m.folderView(m.curArchive.curFolder)
