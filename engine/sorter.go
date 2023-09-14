@@ -50,10 +50,6 @@ func (f *folder) entries() []*entry {
 		slices.Reverse(result)
 	}
 
-	if f.selectedName == "" && len(result) > 0 {
-		result[f.selectedIdx].selected = true
-		f.selectedName = result[f.selectedIdx].name
-	}
 	return result
 }
 

@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"arc/log"
 	"fmt"
 	"math"
 	"path/filepath"
@@ -12,7 +13,7 @@ func (m *model) render() {
 	if m.screenSize.Width < 80 || m.screenSize.Height < 24 {
 		m.pos(0, 0)
 		m.space(m.screenSize.Width, m.screenSize.Height, 9)
-		m.pos(0, 0)
+		m.pos(m.screenSize.Width/2-6, m.screenSize.Height/2)
 		m.text("Too small...", 231, 9, bold)
 		m.show()
 		return
@@ -59,6 +60,9 @@ func (m *model) breadcrumbs() {
 
 func (m *model) folderView(folder *folder) {
 	entries := folder.entries()
+	if entries == nil {
+		return
+	}
 	sizes := calcSizes(m.screenSize.Width, c{size: 10}, c{size: 3}, c{size: 20, flex: 1}, c{size: 19}, c{size: 22})
 	m.pos(0, 2)
 	state := text(" State", sizes[0])
@@ -70,11 +74,39 @@ func (m *model) folderView(folder *folder) {
 
 	lines := m.screenSize.Height - 4
 	m.fileTreeLines = lines
-	if folder.offsetIdx > len(folder.children)+len(folder.files)+1-lines {
+	if folder.offsetIdx >= len(entries)-lines {
 		folder.offsetIdx = len(entries) + 1 - lines
 	}
 	if folder.offsetIdx < 0 {
 		folder.offsetIdx = 0
+	}
+	if folder.selectedIdx >= len(entries) {
+		folder.selectedIdx = len(entries) - 1
+	}
+	if folder.selectedIdx < 0 {
+		folder.selectedIdx = 0
+	}
+	if m.makeSelectedVisible {
+		if folder.offsetIdx <= folder.selectedIdx-lines {
+			folder.offsetIdx = folder.selectedIdx + 1 - lines
+		}
+		if folder.offsetIdx > folder.selectedIdx {
+			folder.offsetIdx = folder.selectedIdx
+		}
+		m.makeSelectedVisible = false
+	}
+	if folder.selectedName == "" {
+		if len(entries) > 0 {
+			entries[folder.selectedIdx].selected = true
+			folder.selectedName = entries[folder.selectedIdx].name
+		}
+	} else {
+		for i := range entries {
+			if entries[i].name == folder.selectedName {
+				folder.selectedIdx = i
+				break
+			}
+		}
 	}
 	for i, entry := range entries[folder.offsetIdx:] {
 		if i >= lines {

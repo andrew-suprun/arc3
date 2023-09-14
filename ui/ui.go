@@ -140,11 +140,11 @@ func (r *tcellRenderer) handleMessages() {
 			r.send("screen-size", "width", r.size.width, "height", r.size.height)
 			r.send("ready")
 
+		case *tcell.EventKey:
+			r.send("key", "name", message.Name())
+
 		case *tcell.EventMouse:
 			r.handleMouseEvent(message)
-
-		case *tcell.EventKey:
-			r.handleKeyEvent(message)
 
 		default:
 			panic(fmt.Sprintf("### unhandled renderer event: %T", message))
@@ -172,15 +172,6 @@ func (r *tcellRenderer) handleCommand(command *parser.Message) {
 	case "stopped":
 		r.quit = true
 	}
-}
-
-func (r *tcellRenderer) handleKeyEvent(key *tcell.EventKey) {
-	name := key.Name()
-	if name == "Ctrl+C" {
-		r.send("stop")
-		return
-	}
-	r.send("key", "name", name)
 }
 
 func (r *tcellRenderer) handleMouseEvent(event *tcell.EventMouse) {
