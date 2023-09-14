@@ -28,7 +28,20 @@ func (m *model) handleKey(name string) {
 	case "Home":
 	case "End":
 	case "Left":
+		archive := m.curArchive
+		parent := archive.curFolder.parent
+		if parent != nil {
+			archive.curFolder = parent
+		}
+
 	case "Right":
+		archive := m.curArchive
+		folder := archive.curFolder
+		child := folder.children[folder.selectedName]
+		if child != nil {
+			archive.curFolder = child
+		}
+
 	case "Ctrl+C":
 		m.sendToFs("stop")
 	}

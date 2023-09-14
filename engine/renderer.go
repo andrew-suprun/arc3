@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"arc/log"
 	"fmt"
 	"math"
 	"path/filepath"
@@ -52,9 +51,10 @@ func (m *model) breadcrumbs() {
 		m.text(text(name, sizes[2*i+2]), 250, 17, bold+italic)
 	}
 	m.text(text("", sizes[len(layout)-1]), 0, 17, 0)
+	x := 0
 	for i := range path {
 		folderPath := filepath.Join(path[:i]...)
-		m.mouseTarget("select-folder", folderPath, sizes[2*i], 1, sizes[2*i+1], 1)
+		m.mouseTarget("select-folder", folderPath, x, 1, sizes[2*i]+x, 1)
 	}
 }
 
@@ -223,8 +223,8 @@ func (m *model) space(width, height int, bg byte) {
 	m.sendToUi("space", "width", width, "height", height, "bg", bg)
 }
 
-func (m *model) mouseTarget(command, path string, x1, y1, x2, y2 int) {
-	m.sendToUi("mouse-target", "command", command, "path", path, "x1", x1, "y1", y1, "x2", x2, "y2", y2)
+func (m *model) mouseTarget(command, path string, x, y, width, height int) {
+	m.sendToUi("mouse-target", "command", command, "path", path, "x", x, "y", y, "width", width, "height", height)
 }
 
 func (m *model) scrollArea(command, path string, x1, y1, x2, y2 int) {
