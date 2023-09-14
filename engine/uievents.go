@@ -1,6 +1,10 @@
 package engine
 
-import "arc/log"
+import (
+	"arc/log"
+	"os/exec"
+	"path/filepath"
+)
 
 func (m *model) handleKey(name string) {
 	log.Debug("key", "name", name)
@@ -51,6 +55,21 @@ func (m *model) handleKey(name string) {
 		if child != nil {
 			archive.curFolder = child
 		}
+
+	case "Enter":
+		archive := m.curArchive
+		folder := archive.curFolder
+		pathSegments := folder.path()
+		path := filepath.Join(pathSegments...)
+		fileName := filepath.Join(archive.root, path, folder.selectedName)
+		exec.Command("open", fileName).Start()
+
+	case "Ctrl+F":
+		archive := m.curArchive
+		folder := archive.curFolder
+		path := filepath.Join(folder.path()...)
+		fileName := filepath.Join(archive.root, path, folder.selectedName)
+		exec.Command("open", "-R", fileName).Start()
 
 	case "Ctrl+C":
 		m.sendToFs("stop")
