@@ -87,11 +87,21 @@ func (m *model) handleEvent(msg *parser.Message) {
 		root := msg.StringValue("root")
 		path, name := parseName(msg.StringValue("path"))
 		curFolder := m.folder(root, path)
-		curFolder.files[name].hash = msg.StringValue("hash")
+		hash := msg.StringValue("hash")
+		file := curFolder.files[name]
+		file.hash = hash
+		m.filesByHash[hash] = append(m.filesByHash[hash], file)
 
 	case "archive-hashed":
 		root := msg.StringValue("root")
 		m.archives[root].state = archiveReady
+
+		for _, archive := range m.archives {
+			if archive.state == archiveScanning {
+				return
+			}
+		}
+		m.analyzeDiscrepancies()
 
 	case "file-copied":
 		panic("IMPLEMENT file-copied")

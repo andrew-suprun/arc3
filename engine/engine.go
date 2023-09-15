@@ -20,11 +20,12 @@ func Run(fsEvents io.ReadCloser, fsCommands io.WriteCloser) {
 	}()
 
 	m := &model{
-		archives:   map[string]*archive{},
-		fsEvents:   fsEvents,
-		fsCommands: fsCommands,
-		uiEvents:   os.Stdin,
-		uiCommands: os.Stdout,
+		archives:    map[string]*archive{},
+		filesByHash: map[string][]*file{},
+		fsEvents:    fsEvents,
+		fsCommands:  fsCommands,
+		uiEvents:    os.Stdin,
+		uiCommands:  os.Stdout,
 	}
 
 	msgs := make(chan *parser.Message)

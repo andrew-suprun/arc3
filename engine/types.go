@@ -10,12 +10,13 @@ import (
 
 type (
 	model struct {
-		roots      []string
-		archives   map[string]*archive
-		fsEvents   io.ReadCloser
-		fsCommands io.WriteCloser
-		uiEvents   io.ReadCloser
-		uiCommands io.WriteCloser
+		roots       []string
+		archives    map[string]*archive
+		filesByHash map[string][]*file
+		fsEvents    io.ReadCloser
+		fsCommands  io.WriteCloser
+		uiEvents    io.ReadCloser
+		uiCommands  io.WriteCloser
 
 		screenSize    r.Size
 		fileTreeLines int

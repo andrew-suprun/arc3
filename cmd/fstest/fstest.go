@@ -202,7 +202,7 @@ var copy2 = []*fileMeta{
 	{name: "a", children: []*fileMeta{
 		{name: "b", children: []*fileMeta{
 			{name: "c", children: []*fileMeta{
-				{name: "d", hash: "0002"},
+				{name: "d", hash: "0001"},
 			}},
 		}},
 	}},
