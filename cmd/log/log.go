@@ -27,6 +27,9 @@ func main() {
 
 		for {
 			text, err := reader.ReadString('\n')
+			if err == io.EOF {
+				break
+			}
 			if err != nil {
 				panic(err)
 			}

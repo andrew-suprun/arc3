@@ -64,13 +64,13 @@ func (m *model) folderView(folder *folder) {
 	if entries == nil {
 		return
 	}
-	sizes := calcSizes(m.screenSize.Width, c{size: 10}, c{size: 3}, c{size: 20, flex: 1}, c{size: 19}, c{size: 22})
+	sizes := calcSizes(m.screenSize.Width, c{size: 10}, c{size: 3}, c{size: 20, flex: 1}, c{size: 22}, c{size: 20})
 	m.pos(0, 2)
 	state := text(" State", sizes[0])
 	kind := text("", sizes[1])
 	document := text("  Document"+folder.sortIndicator(sortByName), sizes[2])
 	date := text("  Date Modified"+folder.sortIndicator(sortByTime), sizes[3])
-	size := text(fmt.Sprintf("%22s", "Size"+folder.sortIndicator(sortBySize)+" "), sizes[4])
+	size := text(fmt.Sprintf("%20s", "Size"+folder.sortIndicator(sortBySize)+" "), sizes[4])
 	m.text(state+kind+document+date+size, 231, 8, bold)
 
 	lines := m.screenSize.Height - 4
