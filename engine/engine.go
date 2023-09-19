@@ -21,7 +21,7 @@ func Run(fsEvents io.ReadCloser, fsCommands io.WriteCloser) {
 
 	m := &model{
 		archives:    map[string]*archive{},
-		filesByHash: map[string][]*file{},
+		filesByHash: map[string][]*meta{},
 		fsEvents:    fsEvents,
 		fsCommands:  fsCommands,
 		uiEvents:    os.Stdin,
@@ -47,10 +47,10 @@ func Run(fsEvents io.ReadCloser, fsCommands io.WriteCloser) {
 		if m.quit {
 			break
 		}
-		if m.requestFrame && m.curArchive.updated {
+		if m.requestFrame && m.curArchive().updated {
 			m.render()
 			m.requestFrame = false
-			m.curArchive.updated = false
+			m.curArchive().updated = false
 		}
 	}
 
@@ -74,14 +74,14 @@ func (m *model) readEvents(input io.Reader, messages chan *parser.Message) {
 	}
 }
 
-func (folder *folder) path() []string {
-	if folder.parent == nil {
+func (m *meta) path() []string {
+	if m.parent == nil {
 		return nil
 	}
 	res := []string{}
-	for folder.parent != nil {
-		res = append(res, folder.name)
-		folder = folder.parent
+	for m.parent != nil {
+		res = append(res, m.name)
+		m = m.parent
 	}
 
 	slices.Reverse(res)

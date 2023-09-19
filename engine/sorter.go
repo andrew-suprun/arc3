@@ -46,9 +46,9 @@ func (f *folder) entries() []*entry {
 		cmp = cmpByAscendingSize
 	}
 	slices.SortFunc(result, cmp)
-	if !f.sortAscending[f.sortColumn] {
-		slices.Reverse(result)
-	}
+	// if !f.sortAscending[f.sortColumn] {
+	// 	slices.Reverse(result)
+	// }
 
 	return result
 }

@@ -6,7 +6,7 @@ func (m *model) analyzeDiscrepancies() {
 	}
 }
 
-func (m *model) analyzeDiscrepancy(hash string, files []*file) {
+func (m *model) analyzeDiscrepancy(hash string, files []*meta) {
 	discrepancy := false
 	if len(files) != len(m.roots) {
 		discrepancy = true

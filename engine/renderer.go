@@ -17,10 +17,9 @@ func (m *model) render() {
 		m.show()
 		return
 	}
-	m.updateMetas(m.curArchive.curFolder)
 	m.showTitle()
 	m.breadcrumbs()
-	m.folderView(m.curArchive.curFolder)
+	m.folderView(m.curArchive().curFolder)
 	m.statusLine()
 	m.show()
 }
@@ -29,12 +28,12 @@ func (m *model) showTitle() {
 	sizes := calcSizes(m.screenSize.Width, c{size: 8}, c{size: 1}, c{flex: 1})
 	m.pos(0, 0)
 	m.text(text(" Archive", sizes[0])+text(" ", sizes[1]), 226, 0, bold+italic)
-	m.text(text(m.curArchive.root, sizes[2]), 226, 0, bold)
+	m.text(text(m.curArchive().root, sizes[2]), 226, 0, bold)
 }
 
 func (m *model) breadcrumbs() {
 	m.pos(0, 1)
-	path := m.curArchive.curFolder.path()
+	path := m.curArchive().curFolder.path()
 	layout := make([]c, 2*len(path)+2)
 	layout[0] = c{size: 5}
 	size := 5
@@ -172,16 +171,6 @@ func (m *model) statusLine() {
 	m.text(text(" Status will be here...", m.screenSize.Width), 231, 0, bold+italic)
 }
 
-func countRune(count int) rune {
-	if count == 0 {
-		return '-'
-	}
-	if count > 9 {
-		return '*'
-	}
-	return '0' + rune(count)
-}
-
 func formatSize(size int) string {
 	str := fmt.Sprintf("%13d ", size)
 	slice := []string{str[:1], str[1:4], str[4:7], str[7:10]}
@@ -234,16 +223,6 @@ func (m *model) scrollArea(command, path string, x1, y1, x2, y2 int) {
 
 func (m *model) show() {
 	m.sendToUi("show")
-}
-
-func (f *folder) sortIndicator(column sortColumn) string {
-	if column == f.sortColumn {
-		if f.sortAscending[column] {
-			return " ▲"
-		}
-		return " ▼"
-	}
-	return ""
 }
 
 type c struct {

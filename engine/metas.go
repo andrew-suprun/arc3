@@ -4,22 +4,22 @@ import (
 	"time"
 )
 
-func (m *model) updateMetas(folder *folder) {
+func (m *model) updateMetas(folder *meta) {
 	folder.size = 0
 	folder.modTime = time.Time{}
 	folder.state = resolved
 
 	for _, child := range folder.children {
-		m.updateMetas(child)
-		updateMeta(folder, &child.meta)
-	}
-
-	for _, file := range folder.files {
-		updateMeta(folder, &file.meta)
+		if child.kind == kindFolder {
+			m.updateMetas(child)
+			updateMeta(folder, child)
+		} else {
+			updateMeta(folder, child)
+		}
 	}
 }
 
-func updateMeta(folder *folder, meta *meta) {
+func updateMeta(folder *meta, meta *meta) {
 	folder.progress += meta.progress
 	folder.size += meta.size
 	if folder.modTime.Before(meta.modTime) {

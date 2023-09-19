@@ -14,45 +14,24 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-type tcellRenderer struct {
-	events           io.WriteCloser
-	commands         io.ReadCloser
-	incoming         chan any
-	outgoing         chan string
-	screen           tcell.Screen
-	size             size
-	mouseTargetAreas []target
-	scrollAreas      []target
-	position         position
-	sync             bool
-	quit             bool
-}
-
-type target struct {
-	command string
-	position
-	size
-}
-
-type position struct {
-	x, y int
-}
-
-type size struct {
-	width, height int
+type app struct {
+	events   io.WriteCloser
+	commands io.ReadCloser
+	incoming chan any
+	outgoing chan string
+	screen   tcell.Screen
+	view     view
+	// size             size
+	// mouseTargetAreas []target
+	// scrollAreas      []target
+	// position         position
+	quit bool
 }
 
 func Run(screen tcell.Screen) {
-	defer func() {
-		if err := recover(); err != nil {
-			log.Debug("ERROR", "err", err)
-			log.Debug("STACK", "stack", debug.Stack())
-		}
-	}()
-
 	commands, events := exec.Start()
 
-	renderer := &tcellRenderer{
+	app := &app{
 		commands: commands,
 		events:   events,
 		incoming: make(chan any),
@@ -61,27 +40,29 @@ func Run(screen tcell.Screen) {
 	}
 
 	screen.EnableMouse()
-	go renderer.sendEvents()
-	go renderer.handleCommands()
-	go renderer.handleTcellEvents()
+	go app.sendEvents()
+	go app.handleCommands()
+	go app.handleTcellEvents()
+
+	app.send("current-folder", "root", os.Args[1], "path", "")
 
 	for _, root := range os.Args[1:] {
 		if root == "--" {
 			break
 		}
-		renderer.send("scan", "root", root)
+		app.send("scan", "root", root)
 	}
 
-	renderer.handleMessages()
+	app.handleMessages()
 }
 
-func (r *tcellRenderer) sendEvents() {
+func (r *app) sendEvents() {
 	for event := range r.outgoing {
 		r.events.Write([]byte(event))
 	}
 }
 
-func (r *tcellRenderer) handleCommands() {
+func (r *app) handleCommands() {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Debug("ERROR", "err", err)
@@ -104,7 +85,7 @@ func (r *tcellRenderer) handleCommands() {
 	}
 }
 
-func (r *tcellRenderer) handleTcellEvents() {
+func (r *app) handleTcellEvents() {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Debug("ERROR", "err", err)
@@ -128,57 +109,44 @@ func (r *tcellRenderer) handleTcellEvents() {
 	}
 }
 
-func (r *tcellRenderer) handleMessages() {
-	for message := range r.incoming {
+func (a *app) handleMessages() {
+	for message := range a.incoming {
 		switch message := message.(type) {
 		case *parser.Message:
-			r.handleCommand(message)
+			a.handleCommand(message)
 
 		case *tcell.EventResize:
-			r.sync = true
-			r.size.width, r.size.height = message.Size()
-			r.send("screen-size", "width", r.size.width, "height", r.size.height)
-			r.send("ready")
+			a.view.sync = true
+			a.view.screenSize.width, a.view.screenSize.height = message.Size()
+			a.send("ready")
 
 		case *tcell.EventKey:
-			r.send("key", "name", message.Name())
+			a.send("key", "name", message.Name())
 
 		case *tcell.EventMouse:
-			r.handleMouseEvent(message)
+			a.handleMouseEvent(message)
 
 		default:
 			panic(fmt.Sprintf("### unhandled renderer event: %T", message))
 		}
-		if r.quit {
+		if a.quit {
 			break
 		}
 	}
 }
 
-func (r *tcellRenderer) handleCommand(command *parser.Message) {
+func (r *app) handleCommand(command *parser.Message) {
 	switch command.Type {
-	case "pos":
-		r.pos(command)
-	case "text":
-		r.text(command)
-	case "space":
-		r.space(command)
-	case "mouse-target":
-		r.mouseTarget(command)
-	case "scroll":
-		r.scroll(command)
-	case "show":
-		r.show()
 	case "stopped":
 		r.quit = true
 	}
 }
 
-func (r *tcellRenderer) handleMouseEvent(event *tcell.EventMouse) {
+func (r *app) handleMouseEvent(event *tcell.EventMouse) {
 	x, y := event.Position()
 
 	if event.Buttons() == 256 || event.Buttons() == 512 {
-		for _, target := range r.scrollAreas {
+		for _, target := range r.view.scrollAreas {
 			if target.position.x <= x && target.position.x+target.size.width > x &&
 				target.position.y <= y && target.position.y+target.size.height > y {
 
@@ -192,7 +160,7 @@ func (r *tcellRenderer) handleMouseEvent(event *tcell.EventMouse) {
 		}
 	}
 
-	for _, target := range r.mouseTargetAreas {
+	for _, target := range r.view.mouseTargetAreas {
 		if target.position.x <= x && target.position.x+target.size.width > x &&
 			target.position.y <= y && target.position.y+target.size.height > y {
 
@@ -200,10 +168,6 @@ func (r *tcellRenderer) handleMouseEvent(event *tcell.EventMouse) {
 			return
 		}
 	}
-}
-
-func (r *tcellRenderer) pos(msg *parser.Message) {
-	r.position = position{x: msg.Int("x"), y: msg.Int("y")}
 }
 
 func tcStyle(msg *parser.Message) tcell.Style {
@@ -220,65 +184,65 @@ func bgStyle(msg *parser.Message) tcell.Style {
 	return tcell.StyleDefault.Background(tcell.PaletteColor(msg.Int("bg")))
 }
 
-func (r *tcellRenderer) text(msg *parser.Message) {
-	style := tcStyle(msg)
-	for _, char := range msg.StringValue("text") {
-		r.screen.SetContent(r.position.x, r.position.y, char, nil, style)
-		r.position.x += 1
-	}
+func (r *app) text(msg *parser.Message) {
+	// style := tcStyle(msg)
+	// for _, char := range msg.StringValue("text") {
+	// 	r.screen.SetContent(r.position.x, r.position.y, char, nil, style)
+	// 	r.position.x += 1
+	// }
 }
 
-func (r *tcellRenderer) space(msg *parser.Message) {
-	w := msg.Int("width")
-	h := msg.Int("height")
-	style := bgStyle(msg)
+func (r *app) space(msg *parser.Message) {
+	// w := msg.Int("width")
+	// h := msg.Int("height")
+	// style := bgStyle(msg)
 
-	for y := 0; y < h; y++ {
-		for x := 0; x < w; x++ {
-			r.screen.SetContent(r.position.x+x, r.position.y+y, ' ', nil, style)
-		}
-	}
+	// for y := 0; y < h; y++ {
+	// 	for x := 0; x < w; x++ {
+	// 		r.screen.SetContent(r.position.x+x, r.position.y+y, ' ', nil, style)
+	// 	}
+	// }
 }
 
-func (r *tcellRenderer) mouseTarget(msg *parser.Message) {
-	posX := msg.Int("x")
-	posY := msg.Int("y")
-	w := msg.Int("width")
-	h := msg.Int("height")
+func (r *app) mouseTarget(msg *parser.Message) {
+	// posX := msg.Int("x")
+	// posY := msg.Int("y")
+	// w := msg.Int("width")
+	// h := msg.Int("height")
 
-	r.mouseTargetAreas = append(r.mouseTargetAreas, target{
-		command:  msg.StringValue("command"),
-		position: position{x: posX, y: posY},
-		size:     size{width: w, height: h},
-	})
+	// r.mouseTargetAreas = append(r.mouseTargetAreas, target{
+	// 	command:  msg.StringValue("command"),
+	// 	position: position{x: posX, y: posY},
+	// 	size:     size{width: w, height: h},
+	// })
 }
 
-func (r *tcellRenderer) scroll(msg *parser.Message) {
-	posX := msg.Int("x")
-	posY := msg.Int("y")
-	w := msg.Int("width")
-	h := msg.Int("height")
+func (r *app) scroll(msg *parser.Message) {
+	// posX := msg.Int("x")
+	// posY := msg.Int("y")
+	// w := msg.Int("width")
+	// h := msg.Int("height")
 
-	r.scrollAreas = append(r.scrollAreas, target{
-		command:  msg.StringValue("command"),
-		position: position{x: posX, y: posY},
-		size:     size{width: w, height: h},
-	})
+	// r.scrollAreas = append(r.scrollAreas, target{
+	// 	command:  msg.StringValue("command"),
+	// 	position: position{x: posX, y: posY},
+	// 	size:     size{width: w, height: h},
+	// })
 }
 
-func (r *tcellRenderer) show() {
-	if r.sync {
-		r.screen.Sync()
-		r.sync = false
-	} else {
-		r.screen.Show()
-	}
-	r.send("ready")
-	r.mouseTargetAreas = r.mouseTargetAreas[:0]
-	r.scrollAreas = r.scrollAreas[:0]
+func (r *app) show() {
+	// if r.sync {
+	// 	r.screen.Sync()
+	// 	r.sync = false
+	// } else {
+	// 	r.screen.Show()
+	// }
+	// r.send("ready")
+	// r.mouseTargetAreas = r.mouseTargetAreas[:0]
+	// r.scrollAreas = r.scrollAreas[:0]
 }
 
-func (r *tcellRenderer) send(kind string, params ...any) {
+func (r *app) send(kind string, params ...any) {
 	msg := parser.String(kind, params...)
 	r.outgoing <- msg
 }

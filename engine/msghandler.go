@@ -6,24 +6,28 @@ import (
 	"arc/renderer"
 	"fmt"
 	"io"
+	"path/filepath"
+	"slices"
 	"strings"
 )
 
 func (m *model) handleEvent(msg *parser.Message) {
-	if _, ok := nonUpdatingEvents[msg.Type]; !ok {
-		m.curArchive.updated = true
-	}
 	switch msg.Type {
+	case "current-folder":
+		root := msg.StringValue("root")
+		path := parsePath(msg.StringValue("path"))
+		if root != m.curRoot || slices.Equal(path, m.curPath) {
+			m.curRoot = root
+			m.curPath = path
+			m.sendCurFolder()
+		}
+
 	case "scan":
 		root := msg.StringValue("root")
-		folder := &folder{
-			meta: meta{
-				root: root,
-				name: "",
-			},
-			children:      map[string]*folder{},
-			files:         map[string]*file{},
-			sortAscending: []bool{true, true, true},
+		folder := &meta{
+			root:     root,
+			name:     "",
+			children: map[string]*meta{},
 		}
 
 		m.archives[root] = &archive{
@@ -35,41 +39,36 @@ func (m *model) handleEvent(msg *parser.Message) {
 
 		m.roots = append(m.roots, root)
 
-		if len(m.roots) == 1 {
-			m.curArchive = m.archives[m.roots[0]]
-		}
-
 		m.sendToFs("scan", "root", root)
 
 	case "folder-scanned":
 		root := msg.StringValue("root")
 		path, name := parseName(msg.StringValue("path"))
 		curFolder := m.folder(root, path)
-		curFolder.children[name] = &folder{
-			meta: meta{
-				root:   root,
-				name:   name,
-				parent: curFolder,
-			},
-			children:      map[string]*folder{},
-			files:         map[string]*file{},
-			sortAscending: []bool{true, true, true},
+		curFolder.children[name] = &meta{
+			root:     root,
+			name:     name,
+			parent:   curFolder,
+			children: map[string]*meta{},
 		}
 
 	case "file-scanned":
 		root := msg.StringValue("root")
 		path, name := parseName(msg.StringValue("path"))
+		size := msg.Int("size")
+		modTime := msg.Time("mod-time")
 
 		curFolder := m.folder(root, path)
-		curFolder.files[name] = &file{
-			meta: meta{
-				root:    root,
-				name:    name,
-				parent:  curFolder,
-				size:    msg.Int("size"),
-				modTime: msg.Time("mod-time"),
-				state:   scanned,
-			},
+		curFolder.children[name] = &meta{
+			root:    root,
+			name:    name,
+			parent:  curFolder,
+			size:    size,
+			modTime: modTime,
+			state:   scanned,
+		}
+		if root == m.curRoot && slices.Equal(path, m.curPath) {
+			m.sendToUi("add-file", "kind", "R", "name", name, "size", size, "mod-time", modTime)
 		}
 
 	case "archive-scanned":
@@ -80,7 +79,7 @@ func (m *model) handleEvent(msg *parser.Message) {
 		root := msg.StringValue("root")
 		path, name := parseName(msg.StringValue("path"))
 		curFolder := m.folder(root, path)
-		file := curFolder.files[name]
+		file := curFolder.children[name]
 		file.progress = msg.Int("size")
 
 	case "file-hashed":
@@ -88,7 +87,7 @@ func (m *model) handleEvent(msg *parser.Message) {
 		path, name := parseName(msg.StringValue("path"))
 		curFolder := m.folder(root, path)
 		hash := msg.StringValue("hash")
-		file := curFolder.files[name]
+		file := curFolder.children[name]
 		file.hash = hash
 		m.filesByHash[hash] = append(m.filesByHash[hash], file)
 
@@ -134,13 +133,33 @@ func (m *model) handleEvent(msg *parser.Message) {
 	}
 }
 
+func (m *model) sendCurFolder() {
+	m.sendToUi("folder-begin")
+	m.sendToUi("folder", "root", m.curRoot, "path", filepath.Join(m.curPath...))
+
+	for _, meta := range m.curArchive().curFolder.children {
+		m.sendToUi("meta", "kind", meta.kind, "name", meta.name, "size", meta.size, "mod-time", meta.modTime,
+			"state", meta.state, "progress", meta.progress, "counts", counts(meta.counts))
+	}
+
+	m.sendToUi("folder-end")
+}
+
+func parsePath(strPath string) []string {
+	path := strings.Split(string(strPath), "/")
+	if path[0] != "" {
+		return path
+	}
+	return nil
+}
+
 func parseName(strPath string) ([]string, string) {
 	path := strings.Split(string(strPath), "/")
 	name := path[len(path)-1]
 	return path[:len(path)-1], name
 }
 
-func (m *model) folder(root string, path []string) *folder {
+func (m *model) folder(root string, path []string) *meta {
 	folder := m.archives[root].rootFolder
 	for _, name := range path {
 		folder = folder.children[name]
@@ -158,9 +177,4 @@ func (m *model) sendToUi(kind string, params ...any) {
 
 func (m *model) send(out io.Writer, kind string, params ...any) {
 	out.Write([]byte(parser.String(kind, params...)))
-}
-
-var nonUpdatingEvents map[string]struct{} = map[string]struct{}{
-	"scan":  {},
-	"ready": {},
 }

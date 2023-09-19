@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -12,16 +13,18 @@ type (
 	model struct {
 		roots       []string
 		archives    map[string]*archive
-		filesByHash map[string][]*file
+		filesByHash map[string][]*meta
 		fsEvents    io.ReadCloser
 		fsCommands  io.WriteCloser
 		uiEvents    io.ReadCloser
 		uiCommands  io.WriteCloser
 
+		curRoot string
+		curPath []string
+
 		screenSize    r.Size
 		fileTreeLines int
 
-		curArchive          *archive
 		quit                bool
 		makeSelectedVisible bool
 		requestFrame        bool
@@ -30,75 +33,47 @@ type (
 	archive struct {
 		root       string
 		idx        int
-		rootFolder *folder
-		curFolder  *folder
+		rootFolder *meta
+		curFolder  *meta
 		state      archiveState
 		updated    bool
 	}
 
 	archiveState int
 
-	meta struct {
-		root     string
-		name     string
-		parent   *folder
-		size     int
-		modTime  time.Time
-		state    state
-		progress int
-	}
-
-	file struct {
-		meta
-		hash   string
-		counts []int
-	}
-
-	folder struct {
-		meta
-		children      map[string]*folder
-		files         map[string]*file
-		selectedName  string
-		selectedIdx   int
-		offsetIdx     int
-		sortColumn    sortColumn
-		sortAscending []bool
-	}
-
-	entry struct {
-		kind     kind
-		name     string
-		size     int
-		modTime  time.Time
-		state    state
-		progress int
-		counts   []int
-		selected bool
-	}
+	state int
 
 	kind int
 
-	state int
-
-	sortColumn int
+	meta struct {
+		kind     kind
+		root     string
+		name     string
+		parent   *meta
+		size     int
+		modTime  time.Time
+		state    state
+		progress int
+		hash     string
+		counts   []int
+		children map[string]*meta
+	}
 )
 
+func (m *model) curArchive() *archive {
+	return m.archives[m.curRoot]
+}
+
 func (m *meta) String() string {
-	return fmt.Sprintf("meta{ root=%q, folder=%q, name=%q, size=%d, mod-time=%s, state=%s, progress=%d }",
-		m.root, filepath.Join(m.parent.path()...), m.name, m.size, m.modTime.Format(time.RFC3339), m.state, m.progress)
-}
-
-func (f *file) String() string {
-	return fmt.Sprintf("file{ meta=%s, hash=%q, counts=%v }", &f.meta, f.hash, f.counts)
-}
-
-func (f *folder) String() string {
-	return fmt.Sprintf("folder{ meta=%s, selected-name=%q, selected-idx=%d }", &f.meta, f.selectedName, f.selectedIdx)
-}
-
-func (e *entry) String() string {
-	return fmt.Sprintf("entry{ kind=%s, name=%q, size=%d, mod-time=%s, state=%s, progress=%d, counts=%v, selected=%v }",
-		e.kind, e.name, e.size, e.modTime.Format(time.RFC3339), e.state, e.progress, e.counts, e.selected)
+	switch m.kind {
+	case kindRegular:
+		return fmt.Sprintf("file{ root=%q, folder=%q, name=%q, size=%d, mod-time=%s, state=%s, progress=%d, hash=%q, counts=%v }",
+			m.root, filepath.Join(m.parent.path()...), m.name, m.size, m.modTime.Format(time.RFC3339), m.state, m.progress, m.hash, m.counts)
+	case kindFolder:
+		return fmt.Sprintf("file{ root=%q, folder=%q, name=%q, size=%d, mod-time=%s, state=%s, progress=%d, children=%d }",
+			m.root, filepath.Join(m.parent.path()...), m.name, m.size, m.modTime.Format(time.RFC3339), m.state, m.progress, len(m.children))
+	}
+	panic("Invalid kind")
 }
 
 func (k kind) String() string {
@@ -138,24 +113,6 @@ func (s archiveState) String() string {
 }
 
 const (
-	sortByName sortColumn = iota
-	sortByTime
-	sortBySize
-)
-
-func (c sortColumn) String() string {
-	switch c {
-	case sortByName:
-		return "SortByName"
-	case sortByTime:
-		return "SortByTime"
-	case sortBySize:
-		return "SortBySize"
-	}
-	return "Illegal Sort Solumn"
-}
-
-const (
 	resolved state = iota
 	scanned
 	hashing
@@ -186,4 +143,26 @@ func (s state) String() string {
 		return "Divergent"
 	}
 	return "UNKNOWN FILE STATE"
+}
+
+func counts(counts []int) string {
+	if counts == nil {
+		return ""
+	}
+
+	buf := &strings.Builder{}
+	for _, count := range counts {
+		fmt.Fprintf(buf, "%c", countRune(count))
+	}
+	return buf.String()
+}
+
+func countRune(count int) rune {
+	if count == 0 {
+		return '-'
+	}
+	if count > 9 {
+		return '*'
+	}
+	return '0' + rune(count)
 }
