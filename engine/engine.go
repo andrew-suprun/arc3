@@ -47,11 +47,6 @@ func Run(fsEvents io.ReadCloser, fsCommands io.WriteCloser) {
 		if m.quit {
 			break
 		}
-		if m.requestFrame && m.curArchive().updated {
-			m.render()
-			m.requestFrame = false
-			m.curArchive().updated = false
-		}
 	}
 
 	for msg := range msgs {

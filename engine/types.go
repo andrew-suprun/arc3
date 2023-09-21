@@ -1,7 +1,6 @@
 package engine
 
 import (
-	r "arc/renderer"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -22,12 +21,7 @@ type (
 		curRoot string
 		curPath []string
 
-		screenSize    r.Size
-		fileTreeLines int
-
-		quit                bool
-		makeSelectedVisible bool
-		requestFrame        bool
+		quit bool
 	}
 
 	archive struct {
@@ -36,7 +30,6 @@ type (
 		rootFolder *meta
 		curFolder  *meta
 		state      archiveState
-		updated    bool
 	}
 
 	archiveState int
@@ -62,6 +55,28 @@ type (
 
 func (m *model) curArchive() *archive {
 	return m.archives[m.curRoot]
+}
+
+func (m *meta) addChild(file *meta) {
+	if m.children == nil {
+		m.children = map[string]*meta{}
+	}
+	m.children[file.name] = file
+}
+
+func (m *meta) updateState() {
+	if m == nil {
+		return
+	}
+	for _, child := range m.children {
+		m.progress += child.progress
+		m.size += child.size
+		if m.modTime.Before(child.modTime) {
+			m.modTime = child.modTime
+		}
+		m.state = max(m.state, child.state)
+	}
+	m.parent.updateState()
 }
 
 func (m *meta) String() string {

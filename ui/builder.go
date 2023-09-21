@@ -35,6 +35,7 @@ func (b *builder) newLine() {
 
 func (b *builder) layout(constraints ...c) []int {
 	b.sizes = make([]int, len(constraints))
+	b.field = 0
 	totalSize, totalFlex := 0, 0
 	for i, cons := range constraints {
 		b.sizes[i] = cons.size
@@ -130,12 +131,7 @@ func (b *builder) state(file *entry, style tcell.Style) {
 	default:
 		return
 	}
-
-	buf := &strings.Builder{}
-	for _, count := range file.counts {
-		fmt.Fprintf(buf, "%c", countRune(count))
-	}
-	b.text(buf.String(), style)
+	b.text(file.counts, style)
 }
 
 func formatSize(size int) string {

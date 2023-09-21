@@ -4,27 +4,8 @@ import (
 	"time"
 )
 
-type view struct {
-	roots               []string
-	archives            map[string]*archive
-	folders             folders
-	root                string
-	path                string
-	folder              *folder
-	entries             []entry
-	screenSize          size
-	selectFolderTargets []target
-	makeSelectedVisible bool
-	sync                bool
-}
-
-func (v *view) curFolder() *folder {
-	return v.folders.folder(v.root, v.path)
-}
-
-type archive struct {
-	state      archiveState
-	rootFolder *folder
+func (app *app) curFolder() *folder {
+	return app.folders.folder(app.root, app.path)
 }
 
 type folder struct {
@@ -44,13 +25,28 @@ func (f folders) folder(root, path string) *folder {
 		archiveFolders = map[string]*folder{}
 		f[root] = archiveFolders
 	}
-	if curFolder, ok := archiveFolders[path]; !ok {
+	if curFolder, ok = archiveFolders[path]; !ok {
 		curFolder = &folder{
 			sortAscending: []bool{true, true, true},
 		}
 		archiveFolders[path] = curFolder
 	}
 	return curFolder
+}
+
+func (app *app) sort() {
+	folder := app.curFolder()
+	switch folder.sortColumn {
+	case sortByName:
+		app.entries.sortByName()
+	case sortBySize:
+		app.entries.sortBySize()
+	case sortByTime:
+		app.entries.sortByTime()
+	}
+	if !folder.sortAscending[folder.sortColumn] {
+		app.entries.reverse()
+	}
 }
 
 type entry struct {
@@ -60,8 +56,7 @@ type entry struct {
 	modTime  time.Time
 	state    state
 	progress int
-	counts   []int
-	selected bool
+	counts   string
 }
 
 type target struct {
@@ -145,6 +140,6 @@ type sortColumn int
 
 const (
 	sortByName sortColumn = iota
-	sortByTime
 	sortBySize
+	sortByTime
 )

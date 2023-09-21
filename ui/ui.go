@@ -4,7 +4,6 @@ import (
 	"arc/exec"
 	"arc/log"
 	"arc/parser"
-	"arc/renderer"
 	"bufio"
 	"fmt"
 	"io"
@@ -15,28 +14,42 @@ import (
 )
 
 type app struct {
-	events   io.WriteCloser
-	commands io.ReadCloser
-	incoming chan any
-	outgoing chan string
-	screen   tcell.Screen
-	view     view
-	// size             size
-	// mouseTargetAreas []target
-	// scrollAreas      []target
-	// position         position
-	quit bool
+	screen              tcell.Screen
+	roots               []string
+	archives            map[string]*archive
+	folders             folders
+	root                string
+	path                string
+	entries             entries
+	screenSize          size
+	selectFolderTargets []target
+	events              io.WriteCloser
+	commands            io.ReadCloser
+	incoming            chan any
+	outgoing            chan string
+
+	folderUpdateInProgress bool
+	makeSelectedVisible    bool
+	sync                   bool
+	quit                   bool
+}
+
+type archive struct {
+	state      archiveState
+	rootFolder *folder
 }
 
 func Run(screen tcell.Screen) {
 	commands, events := exec.Start()
 
 	app := &app{
+		screen:   screen,
+		archives: map[string]*archive{},
+		folders:  folders{},
 		commands: commands,
 		events:   events,
 		incoming: make(chan any),
 		outgoing: make(chan string),
-		screen:   screen,
 	}
 
 	screen.EnableMouse()
@@ -44,14 +57,14 @@ func Run(screen tcell.Screen) {
 	go app.handleCommands()
 	go app.handleTcellEvents()
 
-	app.send("current-folder", "root", os.Args[1], "path", "")
-
 	for _, root := range os.Args[1:] {
 		if root == "--" {
 			break
 		}
 		app.send("scan", "root", root)
 	}
+
+	app.send("set-current-folder", "root", os.Args[1], "path", "")
 
 	app.handleMessages()
 }
@@ -109,137 +122,95 @@ func (r *app) handleTcellEvents() {
 	}
 }
 
-func (a *app) handleMessages() {
-	for message := range a.incoming {
+func (app *app) handleMessages() {
+	for message := range app.incoming {
 		switch message := message.(type) {
 		case *parser.Message:
-			a.handleCommand(message)
+			app.handleCommand(message)
 
 		case *tcell.EventResize:
-			a.view.sync = true
-			a.view.screenSize.width, a.view.screenSize.height = message.Size()
-			a.send("ready")
+			app.sync = true
+			app.screenSize.width, app.screenSize.height = message.Size()
+			app.render(app.screen)
 
 		case *tcell.EventKey:
-			a.send("key", "name", message.Name())
+			app.send("key", "name", message.Name())
 
 		case *tcell.EventMouse:
-			a.handleMouseEvent(message)
+			app.handleMouseEvent(message)
 
 		default:
 			panic(fmt.Sprintf("### unhandled renderer event: %T", message))
 		}
-		if a.quit {
+		if app.quit {
 			break
 		}
 	}
 }
 
-func (r *app) handleCommand(command *parser.Message) {
+func (app *app) handleCommand(command *parser.Message) {
 	switch command.Type {
+	case "current-folder":
+		app.root = command.StringValue("root")
+		app.path = command.StringValue("path")
+		app.reset()
+		app.folderUpdateInProgress = true
+
+	case "update-entry": // TODO Finish
+		update := parseEntry(command)
+		for i, entry := range app.entries.entries {
+			if entry.name == update.name {
+				app.entries.entries[i] = update
+				return
+			}
+		}
+		app.entries.entries = append(app.entries.entries, update)
+
+	case "show-folder":
+		app.sort()
+		app.folderUpdateInProgress = false
+
 	case "stopped":
-		r.quit = true
+		app.quit = true
 	}
 }
 
-func (r *app) handleMouseEvent(event *tcell.EventMouse) {
-	x, y := event.Position()
+func parseEntry(msg *parser.Message) entry {
+	return entry{
+		kind:     kind(msg.Int("kind")),
+		name:     msg.StringValue("name"),
+		size:     msg.Int("size"),
+		modTime:  msg.Time("modTime"),
+		state:    state(msg.Int("state")),
+		progress: msg.Int("progress"),
+		counts:   msg.StringValue("counts"),
+	}
+}
 
+func (app *app) handleMouseEvent(event *tcell.EventMouse) {
+	x, y := event.Position()
 	if event.Buttons() == 256 || event.Buttons() == 512 {
-		for _, target := range r.view.scrollAreas {
+		if y >= 3 && y < app.screenSize.height-1 {
+			folder := app.curFolder()
+			if event.Buttons() == 512 {
+				folder.offsetIdx--
+			} else {
+				folder.offsetIdx++
+			}
+		}
+		return
+	}
+
+	if y == 1 {
+		for _, target := range app.selectFolderTargets {
 			if target.position.x <= x && target.position.x+target.size.width > x &&
 				target.position.y <= y && target.position.y+target.size.height > y {
 
-				if event.Buttons() == 512 {
-					r.send("scroll-up")
-				} else {
-					r.send("scroll-down")
-				}
+				app.send("mouse-target", "path", target.param)
 				return
 			}
 		}
 	}
-
-	for _, target := range r.view.mouseTargetAreas {
-		if target.position.x <= x && target.position.x+target.size.width > x &&
-			target.position.y <= y && target.position.y+target.size.height > y {
-
-			r.send("mouse-target", "command", target.command)
-			return
-		}
-	}
-}
-
-func tcStyle(msg *parser.Message) tcell.Style {
-	flags := renderer.Flags(msg.Int("flags"))
-	return tcell.StyleDefault.
-		Foreground(tcell.PaletteColor(msg.Int("fg"))).
-		Background(tcell.PaletteColor(msg.Int("bg"))).
-		Bold(flags&renderer.Bold == renderer.Bold).
-		Italic(flags&renderer.Italic == renderer.Italic).
-		Reverse(flags&renderer.Reverse == renderer.Reverse)
-}
-
-func bgStyle(msg *parser.Message) tcell.Style {
-	return tcell.StyleDefault.Background(tcell.PaletteColor(msg.Int("bg")))
-}
-
-func (r *app) text(msg *parser.Message) {
-	// style := tcStyle(msg)
-	// for _, char := range msg.StringValue("text") {
-	// 	r.screen.SetContent(r.position.x, r.position.y, char, nil, style)
-	// 	r.position.x += 1
-	// }
-}
-
-func (r *app) space(msg *parser.Message) {
-	// w := msg.Int("width")
-	// h := msg.Int("height")
-	// style := bgStyle(msg)
-
-	// for y := 0; y < h; y++ {
-	// 	for x := 0; x < w; x++ {
-	// 		r.screen.SetContent(r.position.x+x, r.position.y+y, ' ', nil, style)
-	// 	}
-	// }
-}
-
-func (r *app) mouseTarget(msg *parser.Message) {
-	// posX := msg.Int("x")
-	// posY := msg.Int("y")
-	// w := msg.Int("width")
-	// h := msg.Int("height")
-
-	// r.mouseTargetAreas = append(r.mouseTargetAreas, target{
-	// 	command:  msg.StringValue("command"),
-	// 	position: position{x: posX, y: posY},
-	// 	size:     size{width: w, height: h},
-	// })
-}
-
-func (r *app) scroll(msg *parser.Message) {
-	// posX := msg.Int("x")
-	// posY := msg.Int("y")
-	// w := msg.Int("width")
-	// h := msg.Int("height")
-
-	// r.scrollAreas = append(r.scrollAreas, target{
-	// 	command:  msg.StringValue("command"),
-	// 	position: position{x: posX, y: posY},
-	// 	size:     size{width: w, height: h},
-	// })
-}
-
-func (r *app) show() {
-	// if r.sync {
-	// 	r.screen.Sync()
-	// 	r.sync = false
-	// } else {
-	// 	r.screen.Show()
-	// }
-	// r.send("ready")
-	// r.mouseTargetAreas = r.mouseTargetAreas[:0]
-	// r.scrollAreas = r.scrollAreas[:0]
 }
 
 func (r *app) send(kind string, params ...any) {

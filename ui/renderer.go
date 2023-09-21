@@ -19,59 +19,63 @@ var (
 	styleFile           = tcell.StyleDefault.Foreground(tcell.Color231).Background(tcell.ColorWhiteSmoke).Bold(true)
 )
 
-func (v *view) render(screen tcell.Screen) {
-	folder := v.curFolder()
-	lines := v.screenSize.height - 4
-	if folder.offsetIdx >= len(v.entries)-lines {
-		folder.offsetIdx = len(v.entries) + 1 - lines
+func (app *app) render(screen tcell.Screen) {
+	if app.folderUpdateInProgress {
+		return
+	}
+	folder := app.curFolder()
+	lines := app.screenSize.height - 4
+	entries := len(app.entries.entries)
+	if folder.offsetIdx >= entries-lines {
+		folder.offsetIdx = entries + 1 - lines
 	}
 	if folder.offsetIdx < 0 {
 		folder.offsetIdx = 0
 	}
-	if folder.selectedIdx >= len(v.entries) {
-		folder.selectedIdx = len(v.entries) - 1
+	if folder.selectedIdx >= entries {
+		folder.selectedIdx = entries - 1
 	}
 	if folder.selectedIdx < 0 {
 		folder.selectedIdx = 0
 	}
-	if v.makeSelectedVisible {
+	if app.makeSelectedVisible {
 		if folder.offsetIdx <= folder.selectedIdx-lines {
 			folder.offsetIdx = folder.selectedIdx + 1 - lines
 		}
 		if folder.offsetIdx > folder.selectedIdx {
 			folder.offsetIdx = folder.selectedIdx
 		}
-		v.makeSelectedVisible = false
+		app.makeSelectedVisible = false
 	}
 
-	b := &builder{width: v.screenSize.width, height: v.screenSize.height, screen: screen, sync: v.sync}
-	if v.screenSize.width < 80 || v.screenSize.height < 24 {
-		b.space(v.screenSize.width, v.screenSize.height, styleScreenTooSmall)
-		b.pos(v.screenSize.width/2-6, v.screenSize.height/2)
+	b := &builder{width: app.screenSize.width, height: app.screenSize.height, screen: screen, sync: app.sync}
+	if app.screenSize.width < 80 || app.screenSize.height < 24 {
+		b.space(app.screenSize.width, app.screenSize.height, styleScreenTooSmall)
+		b.pos(app.screenSize.width/2-6, app.screenSize.height/2)
 		b.layout(c{flex: 1})
 		b.text("Too Small...", styleScreenTooSmall)
 		b.show()
 		return
 	}
-	v.showTitle(b)
-	v.breadcrumbs(b)
-	v.folderView(b)
-	v.statusLine(b)
+	app.showTitle(b)
+	app.breadcrumbs(b)
+	app.folderView(b)
+	app.statusLine(b)
 	b.show()
 }
 
-func (v *view) showTitle(b *builder) {
+func (app *app) showTitle(b *builder) {
 	b.layout(c{size: 9}, c{flex: 1})
 	b.text(" Archive ", styleAppName)
-	b.text(v.root, styleArchive)
+	b.text(app.root, styleArchive)
 }
 
-func (v *view) breadcrumbs(b *builder) {
+func (app *app) breadcrumbs(b *builder) {
 	b.newLine()
-	v.selectFolderTargets = v.selectFolderTargets[:0]
-	layout := make([]c, 2*len(v.path)+2)
+	app.selectFolderTargets = app.selectFolderTargets[:0]
+	layout := make([]c, 2*len(app.path)+2)
 	layout[0] = c{size: 5}
-	path := parsePath(v.path)
+	path := parsePath(app.path)
 	for i, name := range path {
 		nRunes := len([]rune(name))
 		layout[2*i+1] = c{size: 3}
@@ -79,14 +83,14 @@ func (v *view) breadcrumbs(b *builder) {
 	}
 	layout[len(layout)-1] = c{flex: 1}
 	b.layout(layout...)
-	v.selectFolderTargets = append(v.selectFolderTargets, target{
+	app.selectFolderTargets = append(app.selectFolderTargets, target{
 		param:    "",
 		position: position{x: 0, y: 1},
 		size:     size{width: b.sizes[0], height: 1},
 	})
 	x := b.sizes[0] + b.sizes[1]
 	for i := 2; i < len(b.sizes); i += 2 {
-		v.selectFolderTargets = append(v.selectFolderTargets, target{
+		app.selectFolderTargets = append(app.selectFolderTargets, target{
 			param:    filepath.Join(path[:i/2]...),
 			position: position{x: 1, y: 1},
 			size:     size{width: b.sizes[i], height: 1},
@@ -101,9 +105,9 @@ func (v *view) breadcrumbs(b *builder) {
 	b.text("", styleBreadcrumbs)
 }
 
-func (v *view) folderView(b *builder) {
+func (app *app) folderView(b *builder) {
 	b.newLine()
-	folder := v.curFolder()
+	folder := app.curFolder()
 	b.layout(c{size: 10}, c{size: 3}, c{size: 20, flex: 1}, c{size: 22}, c{size: 20}, c{size: 1})
 	b.text(" State", styleFolderHeader)
 	b.text("", styleFolderHeader)
@@ -111,25 +115,25 @@ func (v *view) folderView(b *builder) {
 	b.text("  Date Modified"+folder.sortIndicator(sortByTime), styleFolderHeader)
 	b.text(fmt.Sprintf("%20s", "Size"+folder.sortIndicator(sortBySize)), styleFolderHeader)
 	b.text(" ", styleFolderHeader)
-	lines := v.screenSize.height - 4
+	lines := app.screenSize.height - 4
 
-	for i := range v.entries[folder.offsetIdx:] {
-		entry := &v.entries[folder.offsetIdx+i]
+	for i := range app.entries.entries[folder.offsetIdx:] {
+		entry := &app.entries.entries[folder.offsetIdx+i]
 		if i >= lines {
 			break
 		}
 
-		style := v.fileStyle(entry).Reverse(folder.selectedIdx == folder.offsetIdx+i)
+		style := fileStyle(entry).Reverse(folder.selectedIdx == folder.offsetIdx+i)
 		b.fileRow(entry, style)
 	}
-	rows := len(v.entries) - folder.offsetIdx
+	rows := len(app.entries.entries) - folder.offsetIdx
 	if rows < lines {
 		b.newLine()
-		b.space(v.screenSize.width, lines-rows, styleDefault)
+		b.space(app.screenSize.width, lines-rows, styleDefault)
 	}
 }
 
-func (v *view) fileStyle(file *entry) tcell.Style {
+func fileStyle(file *entry) tcell.Style {
 	fg := 231
 	switch file.state {
 	case scanned:
@@ -144,8 +148,10 @@ func (v *view) fileStyle(file *entry) tcell.Style {
 	return tcell.StyleDefault.Foreground(tcell.PaletteColor(fg)).Background(17)
 }
 
-func (v *view) statusLine(b *builder) {
-
+func (app *app) statusLine(b *builder) {
+	b.newLine()
+	b.layout(c{flex: 1})
+	b.text(" Status line will be here...", styleArchive)
 }
 
 func parsePath(strPath string) []string {
