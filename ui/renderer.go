@@ -22,14 +22,15 @@ var (
 func (v *view) render(screen tcell.Screen) {
 	folder := v.curFolder()
 	lines := v.screenSize.height - 4
-	if folder.offsetIdx >= len(v.entries)-lines {
-		folder.offsetIdx = len(v.entries) + 1 - lines
+	entries := len(v.entries.entries)
+	if folder.offsetIdx >= entries-lines {
+		folder.offsetIdx = entries + 1 - lines
 	}
 	if folder.offsetIdx < 0 {
 		folder.offsetIdx = 0
 	}
-	if folder.selectedIdx >= len(v.entries) {
-		folder.selectedIdx = len(v.entries) - 1
+	if folder.selectedIdx >= entries {
+		folder.selectedIdx = entries - 1
 	}
 	if folder.selectedIdx < 0 {
 		folder.selectedIdx = 0
@@ -113,8 +114,8 @@ func (v *view) folderView(b *builder) {
 	b.text(" ", styleFolderHeader)
 	lines := v.screenSize.height - 4
 
-	for i := range v.entries[folder.offsetIdx:] {
-		entry := &v.entries[folder.offsetIdx+i]
+	for i := range v.entries.entries[folder.offsetIdx:] {
+		entry := &v.entries.entries[folder.offsetIdx+i]
 		if i >= lines {
 			break
 		}
@@ -122,7 +123,7 @@ func (v *view) folderView(b *builder) {
 		style := v.fileStyle(entry).Reverse(folder.selectedIdx == folder.offsetIdx+i)
 		b.fileRow(entry, style)
 	}
-	rows := len(v.entries) - folder.offsetIdx
+	rows := len(v.entries.entries) - folder.offsetIdx
 	if rows < lines {
 		b.newLine()
 		b.space(v.screenSize.width, lines-rows, styleDefault)
@@ -145,7 +146,9 @@ func (v *view) fileStyle(file *entry) tcell.Style {
 }
 
 func (v *view) statusLine(b *builder) {
-
+	b.newLine()
+	b.layout(c{flex: 1})
+	b.text(" Status line will be here...", styleArchive)
 }
 
 func parsePath(strPath string) []string {

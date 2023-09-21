@@ -130,12 +130,7 @@ func (b *builder) state(file *entry, style tcell.Style) {
 	default:
 		return
 	}
-
-	buf := &strings.Builder{}
-	for _, count := range file.counts {
-		fmt.Fprintf(buf, "%c", countRune(count))
-	}
-	b.text(buf.String(), style)
+	b.text(file.counts, style)
 }
 
 func formatSize(size int) string {

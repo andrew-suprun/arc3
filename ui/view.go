@@ -11,7 +11,7 @@ type view struct {
 	root                string
 	path                string
 	folder              *folder
-	entries             []entry
+	entries             entries
 	screenSize          size
 	selectFolderTargets []target
 	makeSelectedVisible bool
@@ -53,6 +53,21 @@ func (f folders) folder(root, path string) *folder {
 	return curFolder
 }
 
+func (v *view) sort() {
+	folder := v.curFolder()
+	switch folder.sortColumn {
+	case sortByName:
+		v.entries.sortByName()
+	case sortBySize:
+		v.entries.sortBySize()
+	case sortByTime:
+		v.entries.sortByTime()
+	}
+	if !folder.sortAscending[folder.sortColumn] {
+		v.entries.reverse()
+	}
+}
+
 type entry struct {
 	kind     kind
 	name     string
@@ -60,8 +75,7 @@ type entry struct {
 	modTime  time.Time
 	state    state
 	progress int
-	counts   []int
-	selected bool
+	counts   string
 }
 
 type target struct {
@@ -145,6 +159,6 @@ type sortColumn int
 
 const (
 	sortByName sortColumn = iota
-	sortByTime
 	sortBySize
+	sortByTime
 )

@@ -1,7 +1,6 @@
 package engine
 
 import (
-	r "arc/renderer"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -20,14 +19,9 @@ type (
 		uiCommands  io.WriteCloser
 
 		curRoot string
-		curPath []string
+		curPath string
 
-		screenSize    r.Size
-		fileTreeLines int
-
-		quit                bool
-		makeSelectedVisible bool
-		requestFrame        bool
+		quit bool
 	}
 
 	archive struct {
@@ -36,7 +30,6 @@ type (
 		rootFolder *meta
 		curFolder  *meta
 		state      archiveState
-		updated    bool
 	}
 
 	archiveState int
