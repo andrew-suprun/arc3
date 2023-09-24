@@ -74,6 +74,7 @@ func (m *meta) path() []string {
 		return nil
 	}
 	res := []string{}
+	m = m.parent
 	for m.parent != nil {
 		res = append(res, m.name)
 		m = m.parent

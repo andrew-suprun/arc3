@@ -5,6 +5,7 @@ import (
 	"arc/parser"
 	"fmt"
 	"io"
+	"path/filepath"
 	"slices"
 	"strings"
 )
@@ -39,6 +40,7 @@ func (m *model) handleEvent(msg *parser.Message) {
 		m.sendToFs("scan", "root", root)
 
 	case "file-scanned":
+		log.Debug("file-scanned", "mod-time", msg.Params["mod-time"], "type", fmt.Sprintf("%T", msg.Params["mod-time"]))
 		root := msg.StringValue("root")
 		path := msg.StringValue("path")
 		name := msg.StringValue("name")
@@ -115,36 +117,50 @@ func (m *model) handleEvent(msg *parser.Message) {
 }
 
 func (m *model) sendCurFolder() {
-	m.sendToUi("current-folder", "root", m.curRoot, "path", m.curPath)
+	log.Debug("sendCurFolder", "enter")
+	m.sendToUi("current-folder", "root", m.curRoot, "path", filepath.Join(m.curPath...))
 
 	for _, file := range m.curArchive().curFolder.children {
 		m.sendEntryToUi(file)
 	}
 
 	m.sendToUi("show-folder")
+	log.Debug("sendCurFolder", "exit")
 }
 
 func (m *model) updateUiEntry(file *meta) {
+	log.Debug("updateUi", "file", file)
 	if file.root != m.curRoot {
 		return
 	}
+
 	path := file.path()
-	minLen := min(len(path), len(m.curPath))
-	for i := 0; i <= minLen; i++ {
-		if slices.Equal(path[:i], m.curPath) {
-			m.sendEntryToUi(file)
-			return
-		}
+	log.Debug("updateUi", "path", path)
+	n := len(path) - len(m.curPath)
+	log.Debug("updateUi", "n", n)
+
+	if n < 0 {
+		return
 	}
+	if !slices.Equal(path[:len(m.curPath)], m.curPath) {
+		return
+	}
+
+	for i := 0; i < n; i++ {
+		file = file.parent
+		log.Debug("updateUi", "file", file)
+	}
+
+	m.sendEntryToUi(file)
 }
 
 func (m *model) sendEntryToUi(file *meta) {
 	m.sendToUi("update-entry",
-		"kind", file.kind,
+		"kind", file.kind.String(),
 		"name", file.name,
 		"size", file.size,
 		"mod-time", file.modTime,
-		"state", file.state,
+		"state", file.state.String(),
 		"progress", file.progress,
 		"counts", counts(file.counts))
 }

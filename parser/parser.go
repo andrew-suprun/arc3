@@ -2,7 +2,6 @@ package parser
 
 import (
 	"fmt"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -76,29 +75,16 @@ func String(kind string, params ...any) string {
 }
 
 func printValue(buf *strings.Builder, value any) {
-	switch v := reflect.ValueOf(value); v.Kind() {
-	case reflect.String:
-		buf.WriteString(v.String())
-
-	case reflect.Slice:
-		if v, ok := value.([]byte); ok {
-			fmt.Fprint(buf, string(v))
-		} else {
-			fmt.Fprintf(buf, "%v", value)
-
-		}
-
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		fmt.Fprint(buf, v.Int())
-
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		fmt.Fprint(buf, v.Uint())
-
+	switch v := value.(type) {
+	case string:
+		buf.WriteString(v)
+	case []byte:
+		buf.WriteString(string(v))
+	case int:
+		fmt.Fprintf(buf, "%d", v)
+	case time.Time:
+		buf.WriteString(v.Format(time.RFC3339))
 	default:
-		if timestamp, ok := value.(time.Time); ok {
-			buf.WriteString(timestamp.Format(time.RFC3339))
-		} else {
-			fmt.Fprintf(buf, "%v", value)
-		}
+		panic(fmt.Sprintf("Cannot print value %v of type %T", v, v))
 	}
 }
