@@ -131,7 +131,7 @@ func (app *app) handleMessages() {
 		case *tcell.EventResize:
 			app.sync = true
 			app.screenSize.width, app.screenSize.height = message.Size()
-			app.render(app.screen)
+			app.render()
 
 		case *tcell.EventKey:
 			app.send("key", "name", message.Name())
@@ -145,6 +145,7 @@ func (app *app) handleMessages() {
 		if app.quit {
 			break
 		}
+		app.render()
 	}
 }
 
@@ -156,7 +157,7 @@ func (app *app) handleCommand(command *parser.Message) {
 		app.reset()
 		app.folderUpdateInProgress = true
 
-	case "update-entry": // TODO Finish
+	case "update-entry":
 		update := parseEntry(command)
 		for i, entry := range app.entries.entries {
 			if entry.name == update.name {
@@ -177,11 +178,11 @@ func (app *app) handleCommand(command *parser.Message) {
 
 func parseEntry(msg *parser.Message) entry {
 	return entry{
-		kind:     kind(msg.Int("kind")),
+		kind:     parseKind(msg.StringValue("kind")),
 		name:     msg.StringValue("name"),
 		size:     msg.Int("size"),
-		modTime:  msg.Time("modTime"),
-		state:    state(msg.Int("state")),
+		modTime:  msg.Time("mod-time"),
+		state:    uiState(msg.StringValue("state")),
 		progress: msg.Int("progress"),
 		counts:   msg.StringValue("counts"),
 	}

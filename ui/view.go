@@ -78,11 +78,21 @@ type kind int
 func (k kind) String() string {
 	switch k {
 	case kindRegular:
-		return "Regular"
+		return "regular"
 	case kindFolder:
-		return "Folder"
+		return "folder"
 	}
 	return ""
+}
+
+func parseKind(text string) kind {
+	switch text {
+	case "regular":
+		return kindRegular
+	case "folder":
+		return kindFolder
+	}
+	panic("Invalid kind")
 }
 
 const (
@@ -116,7 +126,8 @@ func (s archiveState) String() string {
 type state int
 
 const (
-	scanned state = iota
+	resolved state = iota
+	scanned
 	pending
 	inProgress
 	divergent
@@ -124,16 +135,34 @@ const (
 
 func (s state) String() string {
 	switch s {
+	case resolved:
+		return "resolved"
 	case scanned:
-		return "Scanned"
+		return "scanned"
 	case pending:
-		return "Pending"
+		return "pending"
 	case inProgress:
-		return "In Progress"
+		return "in-progress"
 	case divergent:
-		return "Divergent"
+		return "divergent"
 	}
 	return "UNKNOWN FILE STATE"
+}
+
+func uiState(engState string) state {
+	switch engState {
+	case "resolved":
+		return resolved
+	case "scanned":
+		return scanned
+	case "hashing", "copying":
+		return inProgress
+	case "pending":
+		return pending
+	case "divergent":
+		return divergent
+	}
+	panic("Invalid engine state")
 }
 
 type sortColumn int

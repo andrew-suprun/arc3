@@ -31,6 +31,7 @@ func (b *builder) pos(x, y int) {
 func (b *builder) newLine() {
 	b.x = 0
 	b.y++
+	b.field = 0
 }
 
 func (b *builder) layout(constraints ...c) []int {
@@ -118,6 +119,9 @@ func (b *builder) fileRow(file *entry, style tcell.Style) {
 
 func (b *builder) state(file *entry, style tcell.Style) {
 	switch file.state {
+	case resolved:
+		b.text("", style)
+
 	case inProgress:
 		value := float64(file.progress) / float64(file.size)
 		b.progressBar(value, style)
@@ -126,12 +130,8 @@ func (b *builder) state(file *entry, style tcell.Style) {
 		b.text(" ", style)
 
 	case divergent:
-		break
-
-	default:
-		return
+		b.text(file.counts, style)
 	}
-	b.text(file.counts, style)
 }
 
 func formatSize(size int) string {
@@ -195,7 +195,7 @@ func (b *builder) progressBar(value float64, style tcell.Style) {
 
 func (b *builder) space(width, height int, style tcell.Style) {
 	for line := b.y; line < b.y+height; line++ {
-		for row := b.x; row < b.x+width; b.x++ {
+		for row := b.x; row < b.x+width; row++ {
 			b.screen.SetCell(row, line, styleScreenTooSmall, ' ')
 		}
 	}

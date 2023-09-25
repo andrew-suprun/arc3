@@ -94,9 +94,9 @@ func (m *meta) String() string {
 func (k kind) String() string {
 	switch k {
 	case kindRegular:
-		return "Regular"
+		return "regular"
 	case kindFolder:
-		return "Folder"
+		return "folder"
 	}
 	return ""
 }
@@ -131,31 +131,25 @@ const (
 	resolved state = iota
 	scanned
 	hashing
-	hashed
 	pending
 	copying
-	copied
 	divergent
 )
 
 func (s state) String() string {
 	switch s {
 	case resolved:
-		return "Resolved"
+		return "resolved"
 	case scanned:
-		return "Scanned"
+		return "scanned"
 	case hashing:
-		return "Hashing"
-	case hashed:
-		return "Hashed"
+		return "hashing"
 	case pending:
-		return "Pending"
+		return "pending"
 	case copying:
-		return "Copying"
-	case copied:
-		return "Copied"
+		return "copying"
 	case divergent:
-		return "Divergent"
+		return "divergent"
 	}
 	return "UNKNOWN FILE STATE"
 }

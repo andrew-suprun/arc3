@@ -16,10 +16,9 @@ var (
 	styleArchive        = tcell.StyleDefault.Foreground(tcell.Color226).Background(tcell.ColorBlack).Bold(true)
 	styleBreadcrumbs    = tcell.StyleDefault.Foreground(tcell.Color250).Background(tcell.Color17).Bold(true).Italic(true)
 	styleFolderHeader   = tcell.StyleDefault.Foreground(tcell.Color231).Background(tcell.ColorWhiteSmoke).Bold(true)
-	styleFile           = tcell.StyleDefault.Foreground(tcell.Color231).Background(tcell.ColorWhiteSmoke).Bold(true)
 )
 
-func (app *app) render(screen tcell.Screen) {
+func (app *app) render() {
 	if app.folderUpdateInProgress {
 		return
 	}
@@ -48,7 +47,7 @@ func (app *app) render(screen tcell.Screen) {
 		app.makeSelectedVisible = false
 	}
 
-	b := &builder{width: app.screenSize.width, height: app.screenSize.height, screen: screen, sync: app.sync}
+	b := &builder{width: app.screenSize.width, height: app.screenSize.height, screen: app.screen, sync: app.sync}
 	if app.screenSize.width < 80 || app.screenSize.height < 24 {
 		b.space(app.screenSize.width, app.screenSize.height, styleScreenTooSmall)
 		b.pos(app.screenSize.width/2-6, app.screenSize.height/2)
