@@ -134,7 +134,7 @@ func (app *app) handleMessages() {
 			app.render()
 
 		case *tcell.EventKey:
-			app.send("key", "name", message.Name())
+			app.handleKeyEvent(message)
 
 		case *tcell.EventMouse:
 			app.handleMouseEvent(message)
@@ -185,6 +185,13 @@ func parseEntry(msg *parser.Message) entry {
 		state:    uiState(msg.StringValue("state")),
 		progress: msg.Int("progress"),
 		counts:   msg.StringValue("counts"),
+	}
+}
+
+func (app *app) handleKeyEvent(event *tcell.EventKey) {
+	switch event.Name() {
+	case "Ctrl+C":
+		app.send("stop")
 	}
 }
 

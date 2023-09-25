@@ -94,6 +94,9 @@ func scanArchive(root string) {
 
 		if *progress {
 			for size := 0; size < file.size; size += 100000 {
+				if quit {
+					return
+				}
 				send("hashing-progress",
 					"root", root,
 					"path", path,
