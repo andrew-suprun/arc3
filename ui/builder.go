@@ -14,7 +14,7 @@ type builder struct {
 	width  int
 	height int
 	field  int
-	sizes  []int
+	widths []int
 	screen tcell.Screen
 	sync   bool
 }
@@ -35,29 +35,29 @@ func (b *builder) newLine() {
 }
 
 func (b *builder) layout(constraints ...c) []int {
-	b.sizes = make([]int, len(constraints))
+	b.widths = make([]int, len(constraints))
 	b.field = 0
 	totalSize, totalFlex := 0, 0
 	for i, cons := range constraints {
-		b.sizes[i] = cons.size
+		b.widths[i] = cons.size
 		totalSize += cons.size
 		totalFlex += cons.flex
 	}
 	for totalSize > b.width {
 		idx := 0
-		maxSize := b.sizes[0]
-		for i, size := range b.sizes {
+		maxSize := b.widths[0]
+		for i, size := range b.widths {
 			if maxSize < size {
 				maxSize = size
 				idx = i
 			}
 		}
-		b.sizes[idx]--
+		b.widths[idx]--
 		totalSize--
 	}
 
 	if totalFlex == 0 {
-		return b.sizes
+		return b.widths
 	}
 
 	if totalSize < b.width {
@@ -66,56 +66,45 @@ func (b *builder) layout(constraints ...c) []int {
 		for i, cons := range constraints {
 			rate := float64(diff*cons.flex) / float64(totalFlex)
 			remainders[i] = rate - math.Floor(rate)
-			b.sizes[i] += int(rate)
+			b.widths[i] += int(rate)
 		}
 		totalSize := 0
-		for _, size := range b.sizes {
+		for _, size := range b.widths {
 			totalSize += size
 		}
-		for i := range b.sizes {
+		for i := range b.widths {
 			if totalSize == b.width {
 				break
 			}
 			if constraints[i].flex > 0 {
-				b.sizes[i]++
+				b.widths[i]++
 				totalSize++
 			}
 		}
-		for i := range b.sizes {
+		for i := range b.widths {
 			if totalSize == b.width {
 				break
 			}
 			if constraints[i].flex == 0 {
-				b.sizes[i]++
+				b.widths[i]++
 				totalSize++
 			}
 		}
 	}
 
-	return b.sizes
+	return b.widths
 }
 
 func (b *builder) text(text string, style tcell.Style) {
-	b.screen.SetCell(b.x, b.y, style, trim([]rune(text), b.sizes[b.field])...)
+	runes := trim([]rune(text), b.widths[b.field])
+	for i, ch := range runes {
+		b.screen.SetContent(b.x+i, b.y, ch, nil, style)
+	}
+	b.x += len(runes)
 	b.field++
 }
 
 const modTimeFormat = "  " + time.RFC3339
-
-func (b *builder) fileRow(file *entry, style tcell.Style) {
-	b.newLine()
-	b.state(file, style)
-	switch file.kind {
-	case kindRegular:
-		b.text("   ", style)
-	case kindFolder:
-		b.text(" ▶ ", style)
-	}
-	b.text(file.name, style)
-	b.text(file.modTime.Format(modTimeFormat), style)
-	b.text(formatSize(file.size), style)
-	b.text(" ", style)
-}
 
 func (b *builder) state(file *entry, style tcell.Style) {
 	switch file.state {
@@ -135,7 +124,7 @@ func (b *builder) state(file *entry, style tcell.Style) {
 }
 
 func formatSize(size int) string {
-	str := fmt.Sprintf("  %13d ", size)
+	str := fmt.Sprintf("%13d", size)
 	slice := []string{str[:1], str[1:4], str[4:7], str[7:10]}
 	b := strings.Builder{}
 	for _, s := range slice {
@@ -174,7 +163,7 @@ func (b *builder) progressBar(value float64, style tcell.Style) {
 	if value < 0 || value > 1 {
 		panic(fmt.Sprintf("Invalid progressBar value: %v", value))
 	}
-	width := b.sizes[b.field]
+	width := b.widths[b.field]
 	b.field++
 
 	runes := make([]rune, width)
@@ -196,9 +185,12 @@ func (b *builder) progressBar(value float64, style tcell.Style) {
 func (b *builder) space(width, height int, style tcell.Style) {
 	for line := b.y; line < b.y+height; line++ {
 		for row := b.x; row < b.x+width; row++ {
-			b.screen.SetCell(row, line, styleScreenTooSmall, ' ')
+			b.screen.SetContent(row, line, ' ', nil, style)
 		}
 	}
+	b.y += height - 1
+	b.x += width
+	b.field++
 }
 
 func trim(runes []rune, width int) []rune {

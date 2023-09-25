@@ -15,13 +15,24 @@ var (
 	styleAppName        = tcell.StyleDefault.Foreground(tcell.Color226).Background(tcell.ColorBlack).Bold(true).Italic(true)
 	styleArchive        = tcell.StyleDefault.Foreground(tcell.Color226).Background(tcell.ColorBlack).Bold(true)
 	styleBreadcrumbs    = tcell.StyleDefault.Foreground(tcell.Color250).Background(tcell.Color17).Bold(true).Italic(true)
-	styleFolderHeader   = tcell.StyleDefault.Foreground(tcell.Color231).Background(tcell.ColorWhiteSmoke).Bold(true)
+	styleFolderHeader   = tcell.StyleDefault.Foreground(tcell.Color231).Background(tcell.ColorGray).Bold(true)
 )
 
 func (app *app) render() {
 	if app.folderUpdateInProgress {
 		return
 	}
+
+	b := &builder{width: app.screenSize.width, height: app.screenSize.height, screen: app.screen, sync: app.sync}
+	if app.screenSize.width < 80 || app.screenSize.height < 24 {
+		b.space(app.screenSize.width, app.screenSize.height, styleScreenTooSmall)
+		b.pos(app.screenSize.width/2-6, app.screenSize.height/2)
+		b.layout(c{flex: 1})
+		b.text("Too Small...", styleScreenTooSmall)
+		b.show()
+		return
+	}
+
 	folder := app.curFolder()
 	lines := app.screenSize.height - 4
 	entries := len(app.entries.entries)
@@ -47,15 +58,6 @@ func (app *app) render() {
 		app.makeSelectedVisible = false
 	}
 
-	b := &builder{width: app.screenSize.width, height: app.screenSize.height, screen: app.screen, sync: app.sync}
-	if app.screenSize.width < 80 || app.screenSize.height < 24 {
-		b.space(app.screenSize.width, app.screenSize.height, styleScreenTooSmall)
-		b.pos(app.screenSize.width/2-6, app.screenSize.height/2)
-		b.layout(c{flex: 1})
-		b.text("Too Small...", styleScreenTooSmall)
-		b.show()
-		return
-	}
 	app.showTitle(b)
 	app.breadcrumbs(b)
 	app.folderView(b)
@@ -85,16 +87,16 @@ func (app *app) breadcrumbs(b *builder) {
 	app.selectFolderTargets = append(app.selectFolderTargets, target{
 		param:    "",
 		position: position{x: 0, y: 1},
-		size:     size{width: b.sizes[0], height: 1},
+		size:     size{width: b.widths[0], height: 1},
 	})
-	x := b.sizes[0] + b.sizes[1]
-	for i := 2; i < len(b.sizes); i += 2 {
+	x := b.widths[0] + b.widths[1]
+	for i := 2; i < len(b.widths); i += 2 {
 		app.selectFolderTargets = append(app.selectFolderTargets, target{
 			param:    filepath.Join(path[:i/2]...),
 			position: position{x: 1, y: 1},
-			size:     size{width: b.sizes[i], height: 1},
+			size:     size{width: b.widths[i], height: 1},
 		})
-		x += b.sizes[i] + b.sizes[i+1]
+		x += b.widths[i] + b.widths[i+1]
 	}
 	b.text(" Root", styleBreadcrumbs)
 	for _, name := range path {
@@ -107,23 +109,34 @@ func (app *app) breadcrumbs(b *builder) {
 func (app *app) folderView(b *builder) {
 	b.newLine()
 	folder := app.curFolder()
-	b.layout(c{size: 10}, c{size: 3}, c{size: 20, flex: 1}, c{size: 22}, c{size: 20}, c{size: 1})
+	b.layout(c{size: 10}, c{size: 3}, c{size: 20, flex: 1}, c{size: 22}, c{size: 17}, c{size: 1})
 	b.text(" State", styleFolderHeader)
 	b.text("", styleFolderHeader)
-	b.text("  Document"+folder.sortIndicator(sortByName), styleFolderHeader)
+	b.text("Document"+folder.sortIndicator(sortByName), styleFolderHeader)
 	b.text("  Date Modified"+folder.sortIndicator(sortByTime), styleFolderHeader)
-	b.text(fmt.Sprintf("%20s", "Size"+folder.sortIndicator(sortBySize)), styleFolderHeader)
+	b.text(fmt.Sprintf("%17s", "Size"+folder.sortIndicator(sortBySize)), styleFolderHeader)
 	b.text(" ", styleFolderHeader)
 	lines := app.screenSize.height - 4
 
 	for i := range app.entries.entries[folder.offsetIdx:] {
-		entry := &app.entries.entries[folder.offsetIdx+i]
+		file := &app.entries.entries[folder.offsetIdx+i]
 		if i >= lines {
 			break
 		}
 
-		style := fileStyle(entry).Reverse(folder.selectedIdx == folder.offsetIdx+i)
-		b.fileRow(entry, style)
+		style := fileStyle(file).Reverse(folder.selectedIdx == folder.offsetIdx+i)
+		b.newLine()
+		b.state(file, style)
+		switch file.kind {
+		case kindRegular:
+			b.text("   ", style)
+		case kindFolder:
+			b.text(" ▶ ", style)
+		}
+		b.text(file.name, style)
+		b.text(file.modTime.Format(modTimeFormat), style)
+		b.text(formatSize(file.size), style)
+		b.text(" ", style)
 	}
 	rows := len(app.entries.entries) - folder.offsetIdx
 	if rows < lines {
