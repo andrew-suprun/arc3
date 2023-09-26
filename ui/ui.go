@@ -34,6 +34,20 @@ type app struct {
 	quit                   bool
 }
 
+type target struct {
+	param string
+	position
+	size
+}
+
+type position struct {
+	x, y int
+}
+
+type size struct {
+	width, height int
+}
+
 type archive struct {
 	state      archiveState
 	rootFolder *folder
@@ -67,6 +81,14 @@ func Run(screen tcell.Screen) {
 	app.send("set-current-folder", "root", os.Args[1], "path", "")
 
 	app.handleMessages()
+}
+
+func (app *app) reset() {
+	app.entries.entries = app.entries.entries[:0]
+}
+
+func (app *app) curFolder() *folder {
+	return app.folders.folder(app.root, app.path)
 }
 
 func (r *app) sendEvents() {

@@ -16,6 +16,7 @@ var (
 	styleArchive        = tcell.StyleDefault.Foreground(tcell.Color226).Background(tcell.ColorBlack).Bold(true)
 	styleBreadcrumbs    = tcell.StyleDefault.Foreground(tcell.Color250).Background(tcell.Color17).Bold(true).Italic(true)
 	styleFolderHeader   = tcell.StyleDefault.Foreground(tcell.Color231).Background(tcell.ColorGray).Bold(true)
+	styleProgressBar    = tcell.StyleDefault.Foreground(tcell.Color231).Background(tcell.ColorLightGray)
 )
 
 func (app *app) render() {
@@ -109,8 +110,9 @@ func (app *app) breadcrumbs(b *builder) {
 func (app *app) folderView(b *builder) {
 	b.newLine()
 	folder := app.curFolder()
-	b.layout(c{size: 10}, c{size: 3}, c{size: 20, flex: 1}, c{size: 22}, c{size: 17}, c{size: 1})
-	b.text(" State", styleFolderHeader)
+	b.layout(c{size: 1}, c{size: 10}, c{size: 3}, c{size: 20, flex: 1}, c{size: 22}, c{size: 17}, c{size: 1})
+	b.text(" ", styleFolderHeader)
+	b.text("State", styleFolderHeader)
 	b.text("", styleFolderHeader)
 	b.text("Document"+folder.sortIndicator(sortByName), styleFolderHeader)
 	b.text("  Date Modified"+folder.sortIndicator(sortByTime), styleFolderHeader)
@@ -126,6 +128,7 @@ func (app *app) folderView(b *builder) {
 
 		style := fileStyle(file).Reverse(folder.selectedIdx == folder.offsetIdx+i)
 		b.newLine()
+		b.text(" ", style)
 		b.state(file, style)
 		switch file.kind {
 		case kindRegular:
@@ -157,7 +160,7 @@ func fileStyle(file *entry) tcell.Style {
 	case divergent:
 		fg = 196
 	}
-	return tcell.StyleDefault.Foreground(tcell.PaletteColor(fg)).Background(17)
+	return tcell.StyleDefault.Foreground(tcell.PaletteColor(fg)).Background(tcell.PaletteColor(17))
 }
 
 func (app *app) statusLine(b *builder) {

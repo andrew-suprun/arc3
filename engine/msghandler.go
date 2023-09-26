@@ -40,7 +40,6 @@ func (m *model) handleEvent(msg *parser.Message) {
 		m.sendToFs("scan", "root", root)
 
 	case "file-scanned":
-		log.Debug("file-scanned", "mod-time", msg.Params["mod-time"], "type", fmt.Sprintf("%T", msg.Params["mod-time"]))
 		root := msg.StringValue("root")
 		path := msg.StringValue("path")
 		name := msg.StringValue("name")
@@ -71,17 +70,23 @@ func (m *model) handleEvent(msg *parser.Message) {
 		name := msg.StringValue("name")
 		curFolder := m.folder(root, path)
 		file := curFolder.children[name]
-		file.progress = msg.Int("size")
+		file.state = inProgress
+		file.progress = msg.Int("progress")
+		file.parent.updateState()
+		m.updateUiEntry(file)
 
 	case "file-hashed":
 		root := msg.StringValue("root")
 		path := msg.StringValue("path")
 		name := msg.StringValue("name")
-		curFolder := m.folder(root, path)
 		hash := msg.StringValue("hash")
+		curFolder := m.folder(root, path)
 		file := curFolder.children[name]
 		file.hash = hash
+		file.state = resolved
 		m.filesByHash[hash] = append(m.filesByHash[hash], file)
+		file.parent.updateState()
+		m.updateUiEntry(file)
 
 	case "archive-hashed":
 		root := msg.StringValue("root")
@@ -117,7 +122,6 @@ func (m *model) handleEvent(msg *parser.Message) {
 }
 
 func (m *model) sendCurFolder() {
-	log.Debug("sendCurFolder", "enter")
 	m.sendToUi("current-folder", "root", m.curRoot, "path", filepath.Join(m.curPath...))
 
 	for _, file := range m.curArchive().curFolder.children {
@@ -125,19 +129,15 @@ func (m *model) sendCurFolder() {
 	}
 
 	m.sendToUi("show-folder")
-	log.Debug("sendCurFolder", "exit")
 }
 
 func (m *model) updateUiEntry(file *meta) {
-	log.Debug("updateUi", "file", file)
 	if file.root != m.curRoot {
 		return
 	}
 
 	path := file.path()
-	log.Debug("updateUi", "path", path)
 	n := len(path) - len(m.curPath)
-	log.Debug("updateUi", "n", n)
 
 	if n < 0 {
 		return
@@ -148,7 +148,6 @@ func (m *model) updateUiEntry(file *meta) {
 
 	for i := 0; i < n; i++ {
 		file = file.parent
-		log.Debug("updateUi", "file", file)
 	}
 
 	m.sendEntryToUi(file)

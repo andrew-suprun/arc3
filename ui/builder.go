@@ -113,7 +113,7 @@ func (b *builder) state(file *entry, style tcell.Style) {
 
 	case inProgress:
 		value := float64(file.progress) / float64(file.size)
-		b.progressBar(value, style)
+		b.progressBar(value, styleProgressBar)
 
 	case scanned, pending:
 		b.text(" ", style)
@@ -164,7 +164,6 @@ func (b *builder) progressBar(value float64, style tcell.Style) {
 		panic(fmt.Sprintf("Invalid progressBar value: %v", value))
 	}
 	width := b.widths[b.field]
-	b.field++
 
 	runes := make([]rune, width)
 	progress := int(math.Round(float64(width*8) * float64(value)))
@@ -179,7 +178,12 @@ func (b *builder) progressBar(value float64, style tcell.Style) {
 	for ; idx < int(width); idx++ {
 		runes[idx] = ' '
 	}
-	b.screen.SetCell(b.x, b.y, style, trim(runes, width)...)
+	runes = trim(runes, width)
+	for i, ch := range trim(runes, width) {
+		b.screen.SetContent(b.x+i, b.y, ch, nil, style)
+	}
+	b.field++
+	b.x += len(runes)
 }
 
 func (b *builder) space(width, height int, style tcell.Style) {

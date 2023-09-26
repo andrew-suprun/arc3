@@ -93,7 +93,7 @@ func scanArchive(root string) {
 		name := filepath.Base(file.name)
 
 		if *progress {
-			for size := 0; size < file.size; size += 100000 {
+			for progress := 0; progress < file.size; progress += 400000 {
 				if quit {
 					return
 				}
@@ -101,8 +101,8 @@ func scanArchive(root string) {
 					"root", root,
 					"path", path,
 					"name", name,
-					"size", size)
-				time.Sleep(100 * time.Millisecond)
+					"progress", progress)
+				time.Sleep(20 * time.Millisecond)
 			}
 		}
 		send("file-hashed",

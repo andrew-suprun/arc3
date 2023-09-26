@@ -68,6 +68,10 @@ func (m *meta) updateState() {
 	if m == nil {
 		return
 	}
+	m.size = 0
+	m.progress = 0
+	m.state = resolved
+	m.modTime = nilTime
 	for _, child := range m.children {
 		m.progress += child.progress
 		m.size += child.size
@@ -78,6 +82,8 @@ func (m *meta) updateState() {
 	}
 	m.parent.updateState()
 }
+
+var nilTime time.Time
 
 func (m *meta) String() string {
 	switch m.kind {
@@ -130,9 +136,8 @@ func (s archiveState) String() string {
 const (
 	resolved state = iota
 	scanned
-	hashing
+	inProgress
 	pending
-	copying
 	divergent
 )
 
@@ -142,12 +147,10 @@ func (s state) String() string {
 		return "resolved"
 	case scanned:
 		return "scanned"
-	case hashing:
-		return "hashing"
+	case inProgress:
+		return "in-progress"
 	case pending:
 		return "pending"
-	case copying:
-		return "copying"
 	case divergent:
 		return "divergent"
 	}

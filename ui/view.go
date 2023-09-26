@@ -1,19 +1,19 @@
 package ui
 
-import (
-	"time"
-)
-
-func (app *app) curFolder() *folder {
-	return app.folders.folder(app.root, app.path)
-}
-
 type folder struct {
 	selectedIdx   int
 	offsetIdx     int
 	sortColumn    sortColumn
 	sortAscending []bool
 }
+
+type sortColumn int
+
+const (
+	sortByName sortColumn = iota
+	sortBySize
+	sortByTime
+)
 
 type folders map[string]map[string]*folder
 
@@ -49,57 +49,6 @@ func (app *app) sort() {
 	}
 }
 
-type entry struct {
-	kind     kind
-	name     string
-	size     int
-	modTime  time.Time
-	state    state
-	progress int
-	counts   string
-}
-
-type target struct {
-	param string
-	position
-	size
-}
-
-type position struct {
-	x, y int
-}
-
-type size struct {
-	width, height int
-}
-
-type kind int
-
-func (k kind) String() string {
-	switch k {
-	case kindRegular:
-		return "regular"
-	case kindFolder:
-		return "folder"
-	}
-	return ""
-}
-
-func parseKind(text string) kind {
-	switch text {
-	case "regular":
-		return kindRegular
-	case "folder":
-		return kindFolder
-	}
-	panic("Invalid kind")
-}
-
-const (
-	kindRegular kind = iota
-	kindFolder
-)
-
 type archiveState int
 
 const (
@@ -122,53 +71,3 @@ func (s archiveState) String() string {
 	}
 	panic("Invalid archiveState")
 }
-
-type state int
-
-const (
-	resolved state = iota
-	scanned
-	pending
-	inProgress
-	divergent
-)
-
-func (s state) String() string {
-	switch s {
-	case resolved:
-		return "resolved"
-	case scanned:
-		return "scanned"
-	case pending:
-		return "pending"
-	case inProgress:
-		return "in-progress"
-	case divergent:
-		return "divergent"
-	}
-	return "UNKNOWN FILE STATE"
-}
-
-func uiState(engState string) state {
-	switch engState {
-	case "resolved":
-		return resolved
-	case "scanned":
-		return scanned
-	case "hashing", "copying":
-		return inProgress
-	case "pending":
-		return pending
-	case "divergent":
-		return divergent
-	}
-	panic("Invalid engine state")
-}
-
-type sortColumn int
-
-const (
-	sortByName sortColumn = iota
-	sortBySize
-	sortByTime
-)

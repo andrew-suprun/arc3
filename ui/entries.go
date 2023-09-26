@@ -4,14 +4,90 @@ import (
 	"cmp"
 	"slices"
 	"strings"
+	"time"
 )
 
 type entries struct {
 	entries []entry
 }
 
-func (app *app) reset() {
-	app.entries.entries = app.entries.entries[:0]
+type entry struct {
+	kind     kind
+	name     string
+	size     int
+	modTime  time.Time
+	state    state
+	progress int
+	counts   string
+}
+
+type kind int
+
+const (
+	kindRegular kind = iota
+	kindFolder
+)
+
+func (k kind) String() string {
+	switch k {
+	case kindRegular:
+		return "regular"
+	case kindFolder:
+		return "folder"
+	}
+	return ""
+}
+
+func parseKind(text string) kind {
+	switch text {
+	case "regular":
+		return kindRegular
+	case "folder":
+		return kindFolder
+	}
+	panic("Invalid kind")
+}
+
+type state int
+
+const (
+	resolved state = iota
+	scanned
+	pending
+	inProgress
+	divergent
+)
+
+func (s state) String() string {
+	switch s {
+	case resolved:
+		return "resolved"
+	case scanned:
+		return "scanned"
+	case pending:
+		return "pending"
+	case inProgress:
+		return "in-progress"
+	case divergent:
+		return "divergent"
+	}
+	return "UNKNOWN FILE STATE"
+}
+
+func uiState(engState string) state {
+	switch engState {
+	case "resolved":
+		return resolved
+	case "scanned":
+		return scanned
+	case "in-progress":
+		return inProgress
+	case "pending":
+		return pending
+	case "divergent":
+		return divergent
+	}
+	panic("Invalid engine state")
 }
 
 func (e entries) sortByName() {
