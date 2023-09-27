@@ -80,6 +80,9 @@ func (m *meta) updateState() {
 		}
 		m.state = max(m.state, child.state)
 	}
+	if m.progress > 0 && m.progress < m.size {
+		m.state = inProgress
+	}
 	m.parent.updateState()
 }
 

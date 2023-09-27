@@ -4,13 +4,16 @@ import (
 	"arc/log"
 	"arc/parser"
 	"bufio"
+	"cmp"
+	"encoding/csv"
 	"flag"
 	"fmt"
 	"io"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"slices"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -93,7 +96,7 @@ func scanArchive(root string) {
 		name := filepath.Base(file.name)
 
 		if *progress {
-			for progress := 0; progress < file.size; progress += 400000 {
+			for progress := 0; progress < file.size; progress += 1000000 {
 				if quit {
 					return
 				}
@@ -102,7 +105,7 @@ func scanArchive(root string) {
 					"path", path,
 					"name", name,
 					"progress", progress)
-				time.Sleep(20 * time.Millisecond)
+				// time.Sleep(20 * time.Millisecond)
 			}
 		}
 		send("file-hashed",
@@ -119,10 +122,6 @@ func send(kind string, params ...any) {
 	outgoing <- parser.String(kind, params...)
 }
 
-var beginning = time.Date(2001, 1, 1, 0, 0, 0, 0, time.UTC)
-var end = time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
-var duration = end.Sub(beginning)
-
 type fileMeta struct {
 	name    string
 	hash    string
@@ -130,38 +129,53 @@ type fileMeta struct {
 	modTime time.Time
 }
 
-var sizes = map[string]int{}
-var modTimes = map[string]time.Time{}
+var archives = map[string][]fileMeta{}
 
 func init() {
-	for _, archive := range archives {
-		for _, file := range archive {
-			size, ok := sizes[file.hash]
-			if !ok {
-				size = rand.Intn(100000000)
-				file.size = size
-				sizes[file.hash] = size
-			}
-			file.size = size
-			modTime, ok := modTimes[file.hash]
-			if !ok {
-				modTime = beginning.Add(time.Duration(rand.Int63n(int64(duration))))
-				file.modTime = modTime
-				modTimes[file.hash] = modTime
-			}
-			file.modTime = modTime
-		}
+	or := readMeta()
+	c1 := slices.Clone(or)
+	c2 := slices.Clone(or)
+	archives = map[string][]fileMeta{
+		"origin": or,
+		"copy 1": c1,
+		"copy 2": c2,
 	}
 }
 
-var archives = map[string][]*fileMeta{
-	"origin": {
-		{name: "a/b/c/d", hash: "0001"},
-	},
-	"copy 1": {
-		{name: "a/b/c/d", hash: "0001"},
-	},
-	"copy 2": {
-		{name: "a/b/c/d", hash: "0002"},
-	},
+func readMeta() []fileMeta {
+	result := []fileMeta{}
+	hashInfoFile, err := os.Open("data/.meta.csv")
+	if err != nil {
+		return nil
+	}
+	defer hashInfoFile.Close()
+
+	records, err := csv.NewReader(hashInfoFile).ReadAll()
+	if err != nil || len(records) == 0 {
+		return nil
+	}
+
+	for _, record := range records[1:] {
+		if len(record) == 5 {
+			name := record[1]
+			size, er2 := strconv.ParseUint(record[2], 10, 64)
+			modTime, er3 := time.Parse(time.RFC3339, record[3])
+			modTime = modTime.UTC().Round(time.Second)
+			hash := record[4]
+			if hash == "" || er2 != nil || er3 != nil {
+				continue
+			}
+
+			result = append(result, fileMeta{
+				name:    name,
+				hash:    hash,
+				size:    int(size),
+				modTime: modTime,
+			})
+		}
+	}
+	slices.SortFunc(result, func(a, b fileMeta) int {
+		return cmp.Compare(a.name, b.name)
+	})
+	return result
 }

@@ -84,6 +84,7 @@ func (m *model) handleEvent(msg *parser.Message) {
 		file := curFolder.children[name]
 		file.hash = hash
 		file.state = resolved
+		file.progress = file.size
 		m.filesByHash[hash] = append(m.filesByHash[hash], file)
 		file.parent.updateState()
 		m.updateUiEntry(file)

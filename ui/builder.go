@@ -124,8 +124,8 @@ func (b *builder) state(file *entry, style tcell.Style) {
 }
 
 func formatSize(size int) string {
-	str := fmt.Sprintf("%13d", size)
-	slice := []string{str[:1], str[1:4], str[4:7], str[7:10]}
+	str := fmt.Sprintf("%15d", size)
+	slice := []string{str[:3], str[3:6], str[6:9], str[9:12]}
 	b := strings.Builder{}
 	for _, s := range slice {
 		b.WriteString(s)
@@ -135,7 +135,7 @@ func formatSize(size int) string {
 			b.WriteString(",")
 		}
 	}
-	b.WriteString(str[10:])
+	b.WriteString(str[12:])
 	return b.String()
 }
 

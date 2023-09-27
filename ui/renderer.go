@@ -25,6 +25,8 @@ func (app *app) render() {
 	}
 
 	b := &builder{width: app.screenSize.width, height: app.screenSize.height, screen: app.screen, sync: app.sync}
+	app.sync = false
+
 	if app.screenSize.width < 80 || app.screenSize.height < 24 {
 		b.space(app.screenSize.width, app.screenSize.height, styleScreenTooSmall)
 		b.pos(app.screenSize.width/2-6, app.screenSize.height/2)
@@ -110,13 +112,13 @@ func (app *app) breadcrumbs(b *builder) {
 func (app *app) folderView(b *builder) {
 	b.newLine()
 	folder := app.curFolder()
-	b.layout(c{size: 1}, c{size: 10}, c{size: 3}, c{size: 20, flex: 1}, c{size: 22}, c{size: 17}, c{size: 1})
+	b.layout(c{size: 1}, c{size: 10}, c{size: 3}, c{size: 20, flex: 1}, c{size: 22}, c{size: 19}, c{size: 1})
 	b.text(" ", styleFolderHeader)
 	b.text("State", styleFolderHeader)
 	b.text("", styleFolderHeader)
 	b.text("Document"+folder.sortIndicator(sortByName), styleFolderHeader)
 	b.text("  Date Modified"+folder.sortIndicator(sortByTime), styleFolderHeader)
-	b.text(fmt.Sprintf("%17s", "Size"+folder.sortIndicator(sortBySize)), styleFolderHeader)
+	b.text(fmt.Sprintf("%19s", "Size"+folder.sortIndicator(sortBySize)), styleFolderHeader)
 	b.text(" ", styleFolderHeader)
 	lines := app.screenSize.height - 4
 
