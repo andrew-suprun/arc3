@@ -77,9 +77,9 @@ func (app *app) showTitle(b *builder) {
 func (app *app) breadcrumbs(b *builder) {
 	b.newLine()
 	app.selectFolderTargets = app.selectFolderTargets[:0]
-	layout := make([]c, 2*len(app.path)+2)
-	layout[0] = c{size: 5}
 	path := parsePath(app.path)
+	layout := make([]c, 2*len(path)+2)
+	layout[0] = c{size: 5}
 	for i, name := range path {
 		nRunes := len([]rune(name))
 		layout[2*i+1] = c{size: 3}

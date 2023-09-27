@@ -19,7 +19,7 @@ type (
 		uiCommands  io.WriteCloser
 
 		curRoot string
-		curPath []string
+		curPath string
 
 		quit bool
 	}
@@ -28,7 +28,6 @@ type (
 		root       string
 		idx        int
 		rootFolder *meta
-		curFolder  *meta
 		state      archiveState
 	}
 

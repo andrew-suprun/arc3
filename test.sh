@@ -7,6 +7,7 @@ go build -o _build/fstest cmd/fstest/fstest.go && \
 _build/arc origin "copy 1" "copy 2" -- \
 _build/log "log-arc-engine.log" -- \
 _build/engine -- \
-_build/log "log-engine-fstest.log" -- \
 _build/fstest -p=false
 
+
+_build/log "log-engine-fstest.log" -- \

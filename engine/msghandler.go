@@ -5,7 +5,6 @@ import (
 	"arc/parser"
 	"fmt"
 	"io"
-	"path/filepath"
 	"slices"
 	"strings"
 )
@@ -14,8 +13,8 @@ func (m *model) handleEvent(msg *parser.Message) {
 	switch msg.Type {
 	case "set-current-folder":
 		root := msg.StringValue("root")
-		path := parsePath(msg.StringValue("path"))
-		if root != m.curRoot || !slices.Equal(path, m.curPath) {
+		path := msg.StringValue("path")
+		if root != m.curRoot || path != m.curPath {
 			m.curRoot = root
 			m.curPath = path
 			m.sendCurFolder()
@@ -32,7 +31,6 @@ func (m *model) handleEvent(msg *parser.Message) {
 			root:       root,
 			idx:        len(m.roots),
 			rootFolder: folder,
-			curFolder:  folder,
 		}
 
 		m.roots = append(m.roots, root)
@@ -123,9 +121,11 @@ func (m *model) handleEvent(msg *parser.Message) {
 }
 
 func (m *model) sendCurFolder() {
-	m.sendToUi("current-folder", "root", m.curRoot, "path", filepath.Join(m.curPath...))
+	m.sendToUi("current-folder", "root", m.curRoot, "path", m.curPath)
+	log.Debug("sendCurFolder", "root", m.curRoot, "path", m.curPath)
 
-	for _, file := range m.curArchive().curFolder.children {
+	for _, file := range m.curFolder().children {
+		log.Debug("sendCurFolder", "file", file)
 		m.sendEntryToUi(file)
 	}
 
@@ -136,14 +136,15 @@ func (m *model) updateUiEntry(file *meta) {
 	if file.root != m.curRoot {
 		return
 	}
+	curPath := parsePath(m.curPath)
 
 	path := file.path()
-	n := len(path) - len(m.curPath)
+	n := len(path) - len(curPath)
 
 	if n < 0 {
 		return
 	}
-	if !slices.Equal(path[:len(m.curPath)], m.curPath) {
+	if !slices.Equal(path[:len(curPath)], curPath) {
 		return
 	}
 
@@ -171,6 +172,10 @@ func parsePath(strPath string) []string {
 		return path
 	}
 	return nil
+}
+
+func (m *model) curFolder() *meta {
+	return m.folder(m.curRoot, m.curPath)
 }
 
 func (m *model) folder(root string, path string) *meta {

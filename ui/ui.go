@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 
 	"github.com/gdamore/tcell/v2"
@@ -211,7 +212,26 @@ func parseEntry(msg *parser.Message) entry {
 }
 
 func (app *app) handleKeyEvent(event *tcell.EventKey) {
+	log.Debug("handleKeyEvent", "key", event.Name())
 	switch event.Name() {
+	case "Up":
+		app.curFolder().selectedIdx--
+
+	case "Down":
+		app.curFolder().selectedIdx++
+
+	case "PgUp":
+		app.curFolder().selectedIdx -= app.screenSize.height - 4
+
+	case "PgDn":
+		app.curFolder().selectedIdx += app.screenSize.height - 4
+
+	case "Right":
+		idx := app.curFolder().selectedIdx
+		entry := app.entries.entries[idx]
+		path := filepath.Join(app.path + entry.name)
+		app.send("set-current-folder", "root", app.root, "path", path)
+
 	case "Ctrl+C":
 		app.send("stop")
 	}
