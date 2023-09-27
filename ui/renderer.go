@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"arc/log"
 	"fmt"
 	"math"
 	"path/filepath"
@@ -39,8 +40,9 @@ func (app *app) render() {
 	folder := app.curFolder()
 	lines := app.screenSize.height - 4
 	entries := len(app.entries.entries)
-	if folder.offsetIdx >= entries-lines {
+	if folder.offsetIdx >= entries-lines+1 {
 		folder.offsetIdx = entries + 1 - lines
+		log.Debug("render", "offset.1", folder.offsetIdx)
 	}
 	if folder.offsetIdx < 0 {
 		folder.offsetIdx = 0
@@ -54,6 +56,7 @@ func (app *app) render() {
 	if app.makeSelectedVisible {
 		if folder.offsetIdx <= folder.selectedIdx-lines {
 			folder.offsetIdx = folder.selectedIdx + 1 - lines
+			log.Debug("render", "offset.2", folder.offsetIdx)
 		}
 		if folder.offsetIdx > folder.selectedIdx {
 			folder.offsetIdx = folder.selectedIdx

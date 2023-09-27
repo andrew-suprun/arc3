@@ -14,6 +14,7 @@ func (m *model) handleEvent(msg *parser.Message) {
 	case "set-current-folder":
 		root := msg.StringValue("root")
 		path := msg.StringValue("path")
+		log.Debug("set-current-folder", "root", root, "path", path)
 		if root != m.curRoot || path != m.curPath {
 			m.curRoot = root
 			m.curPath = path

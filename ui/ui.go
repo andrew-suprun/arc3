@@ -216,20 +216,29 @@ func (app *app) handleKeyEvent(event *tcell.EventKey) {
 	switch event.Name() {
 	case "Up":
 		app.curFolder().selectedIdx--
+		app.makeSelectedVisible = true
 
 	case "Down":
 		app.curFolder().selectedIdx++
+		app.makeSelectedVisible = true
 
 	case "PgUp":
 		app.curFolder().selectedIdx -= app.screenSize.height - 4
+		app.makeSelectedVisible = true
 
 	case "PgDn":
 		app.curFolder().selectedIdx += app.screenSize.height - 4
+		app.makeSelectedVisible = true
 
 	case "Right":
 		idx := app.curFolder().selectedIdx
 		entry := app.entries.entries[idx]
-		path := filepath.Join(app.path + entry.name)
+		path := filepath.Join(app.path, entry.name)
+		app.send("set-current-folder", "root", app.root, "path", path)
+
+	case "Left":
+		segments := parsePath(app.path)
+		path := filepath.Join(segments[:len(segments)-1]...)
 		app.send("set-current-folder", "root", app.root, "path", path)
 
 	case "Ctrl+C":
