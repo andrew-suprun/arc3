@@ -86,7 +86,7 @@ func Run(screen tcell.Screen) {
 }
 
 func (app *app) reset() {
-	app.entries.entries = app.entries.entries[:0]
+	app.entries = app.entries[:0]
 }
 
 func (app *app) curFolder() *folder {
@@ -94,7 +94,7 @@ func (app *app) curFolder() *folder {
 }
 
 func (app *app) curEntry() *entry {
-	return &app.entries.entries[app.curFolder().selectedIdx]
+	return &app.entries[app.curFolder().selectedIdx]
 }
 
 func (r *app) sendEvents() {
@@ -187,13 +187,13 @@ func (app *app) handleCommand(command *parser.Message) {
 
 	case "update-entry":
 		update := parseEntry(command)
-		for i, entry := range app.entries.entries {
+		for i, entry := range app.entries {
 			if entry.name == update.name {
-				app.entries.entries[i] = update
+				app.entries[i] = update
 				return
 			}
 		}
-		app.entries.entries = append(app.entries.entries, update)
+		app.entries = append(app.entries, update)
 
 	case "show-folder":
 		app.sort()

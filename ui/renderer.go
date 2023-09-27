@@ -38,7 +38,7 @@ func (app *app) render() {
 
 	folder := app.curFolder()
 	lines := app.screenSize.height - 4
-	entries := len(app.entries.entries)
+	entries := len(app.entries)
 	if folder.offsetIdx >= entries-lines+1 {
 		folder.offsetIdx = entries + 1 - lines
 	}
@@ -122,8 +122,8 @@ func (app *app) folderView(b *builder) {
 	b.text(" ", styleFolderHeader)
 	lines := app.screenSize.height - 4
 
-	for i := range app.entries.entries[folder.offsetIdx:] {
-		file := &app.entries.entries[folder.offsetIdx+i]
+	for i := range app.entries[folder.offsetIdx:] {
+		file := &app.entries[folder.offsetIdx+i]
 		if i >= lines {
 			break
 		}
@@ -143,7 +143,7 @@ func (app *app) folderView(b *builder) {
 		b.text(formatSize(file.size), style)
 		b.text(" ", style)
 	}
-	rows := len(app.entries.entries) - folder.offsetIdx
+	rows := len(app.entries) - folder.offsetIdx
 	if rows < lines {
 		b.newLine()
 		b.space(app.screenSize.width, lines-rows, styleDefault)

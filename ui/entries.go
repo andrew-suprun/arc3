@@ -7,9 +7,7 @@ import (
 	"time"
 )
 
-type entries struct {
-	entries []entry
-}
+type entries []entry
 
 type entry struct {
 	kind     kind
@@ -91,7 +89,7 @@ func uiState(engState string) state {
 }
 
 func (e entries) sortByName() {
-	slices.SortFunc(e.entries, func(i, j entry) int {
+	slices.SortFunc(e, func(i, j entry) int {
 		byName := cmp.Compare(strings.ToLower(i.name), strings.ToLower(j.name))
 		if byName != 0 {
 			return byName
@@ -105,7 +103,7 @@ func (e entries) sortByName() {
 }
 
 func (e entries) sortBySize() {
-	slices.SortFunc(e.entries, func(i, j entry) int {
+	slices.SortFunc(e, func(i, j entry) int {
 		bySize := cmp.Compare(i.size, j.size)
 		if bySize != 0 {
 			return bySize
@@ -119,7 +117,7 @@ func (e entries) sortBySize() {
 }
 
 func (e entries) sortByTime() {
-	slices.SortFunc(e.entries, func(i, j entry) int {
+	slices.SortFunc(e, func(i, j entry) int {
 		byTime := i.modTime.Compare(j.modTime)
 		if byTime != 0 {
 			return byTime
@@ -133,5 +131,5 @@ func (e entries) sortByTime() {
 }
 
 func (e entries) reverse() {
-	slices.Reverse(e.entries)
+	slices.Reverse(e)
 }
