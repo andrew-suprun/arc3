@@ -229,10 +229,18 @@ func (app *app) handleKeyEvent(event *tcell.EventKey) {
 
 	case "PgUp":
 		app.curFolder().selectedIdx -= app.screenSize.height - 4
-		app.makeSelectedVisible = true
+		app.curFolder().offsetIdx -= app.screenSize.height - 4
 
 	case "PgDn":
 		app.curFolder().selectedIdx += app.screenSize.height - 4
+		app.curFolder().offsetIdx += app.screenSize.height - 4
+
+	case "Home":
+		app.curFolder().selectedIdx = 0
+		app.makeSelectedVisible = true
+
+	case "End":
+		app.curFolder().selectedIdx = len(app.entries) - 1
 		app.makeSelectedVisible = true
 
 	case "Right":
