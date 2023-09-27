@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"arc/log"
 	"fmt"
 	"math"
 	"path/filepath"
@@ -42,7 +41,6 @@ func (app *app) render() {
 	entries := len(app.entries.entries)
 	if folder.offsetIdx >= entries-lines+1 {
 		folder.offsetIdx = entries + 1 - lines
-		log.Debug("render", "offset.1", folder.offsetIdx)
 	}
 	if folder.offsetIdx < 0 {
 		folder.offsetIdx = 0
@@ -56,7 +54,6 @@ func (app *app) render() {
 	if app.makeSelectedVisible {
 		if folder.offsetIdx <= folder.selectedIdx-lines {
 			folder.offsetIdx = folder.selectedIdx + 1 - lines
-			log.Debug("render", "offset.2", folder.offsetIdx)
 		}
 		if folder.offsetIdx > folder.selectedIdx {
 			folder.offsetIdx = folder.selectedIdx
@@ -88,7 +85,7 @@ func (app *app) breadcrumbs(b *builder) {
 		layout[2*i+1] = c{size: 3}
 		layout[2*i+2] = c{size: nRunes}
 	}
-	layout[len(layout)-1] = c{flex: 1}
+	layout[len(layout)-1] = c{size: 1, flex: 1}
 	b.layout(layout...)
 	app.selectFolderTargets = append(app.selectFolderTargets, target{
 		param:    "",

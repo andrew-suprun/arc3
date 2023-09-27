@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	osexec "os/exec"
 	"path/filepath"
 	"runtime/debug"
 
@@ -90,6 +91,10 @@ func (app *app) reset() {
 
 func (app *app) curFolder() *folder {
 	return app.folders.folder(app.root, app.path)
+}
+
+func (app *app) curEntry() *entry {
+	return &app.entries.entries[app.curFolder().selectedIdx]
 }
 
 func (r *app) sendEvents() {
@@ -231,15 +236,26 @@ func (app *app) handleKeyEvent(event *tcell.EventKey) {
 		app.makeSelectedVisible = true
 
 	case "Right":
-		idx := app.curFolder().selectedIdx
-		entry := app.entries.entries[idx]
-		path := filepath.Join(app.path, entry.name)
-		app.send("set-current-folder", "root", app.root, "path", path)
+		entry := app.curEntry()
+		if entry.kind == kindFolder {
+			path := filepath.Join(app.path, entry.name)
+			app.send("set-current-folder", "root", app.root, "path", path)
+		}
 
 	case "Left":
 		segments := parsePath(app.path)
-		path := filepath.Join(segments[:len(segments)-1]...)
-		app.send("set-current-folder", "root", app.root, "path", path)
+		if segments != nil {
+			path := filepath.Join(segments[:len(segments)-1]...)
+			app.send("set-current-folder", "root", app.root, "path", path)
+		}
+
+	case "Ctrl+F":
+		path := filepath.Join(app.root, app.path, app.curEntry().name)
+		osexec.Command("open", "-R", path).Start()
+
+	case "Enter":
+		path := filepath.Join(app.root, app.path, app.curEntry().name)
+		osexec.Command("open", path).Start()
 
 	case "Ctrl+C":
 		app.send("stop")
@@ -252,9 +268,9 @@ func (app *app) handleMouseEvent(event *tcell.EventMouse) {
 		if y >= 3 && y < app.screenSize.height-1 {
 			folder := app.curFolder()
 			if event.Buttons() == 512 {
-				folder.offsetIdx--
-			} else {
 				folder.offsetIdx++
+			} else {
+				folder.offsetIdx--
 			}
 		}
 		return

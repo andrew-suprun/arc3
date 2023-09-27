@@ -64,7 +64,7 @@ mainLoop:
 			wg.Wait()
 			break mainLoop
 		default:
-			log.Debug("unrecognized", "type", cmd.Type)
+			panic(fmt.Sprintf("unrecognized type: %q", cmd.Type))
 		}
 	}
 
@@ -96,7 +96,7 @@ func scanArchive(root string) {
 		name := filepath.Base(file.name)
 
 		if *progress {
-			for progress := 0; progress < file.size; progress += 1000000 {
+			for progress := 0; progress < file.size; progress += 10000000 {
 				if quit {
 					return
 				}
