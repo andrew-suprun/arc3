@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"reflect"
 	"time"
 )
 
@@ -76,33 +75,29 @@ func Debug(msg string, params ...any) {
 }
 
 func printValue(buf *bytes.Buffer, value any) {
-	if str, ok := value.(fmt.Stringer); ok {
-		fmt.Fprint(buf, str)
-		return
-	}
-	switch v := reflect.ValueOf(value); v.Kind() {
-	case reflect.String:
-		fmt.Fprintf(buf, "%q", v.String())
+	switch v := value.(type) {
+	case string:
+		fmt.Fprintf(buf, "%q", v)
 
-	case reflect.Bool:
-		fmt.Fprintf(buf, "%v", v.Bool())
+	case []byte:
+		fmt.Fprintf(buf, "%q", string(v))
 
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		fmt.Fprint(buf, v.Int())
-
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		fmt.Fprint(buf, v.Uint())
-
-	case reflect.Slice:
-		if v, ok := value.([]byte); ok {
-			fmt.Fprint(buf, string(v))
-		} else {
-			fmt.Fprintf(buf, "%v", value)
-
+	case []string:
+		fmt.Fprint(buf, "[")
+		for i, vv := range v {
+			if i > 0 {
+				fmt.Fprint(buf, ", ")
+			}
+			fmt.Fprintf(buf, "%q", vv)
 		}
+		fmt.Fprint(buf, "]")
 
 	default:
-		fmt.Fprintf(buf, "%v", value)
+		if str, ok := value.(fmt.Stringer); ok {
+			fmt.Fprintf(buf, "%q", str.String())
+		} else {
+			fmt.Fprintf(buf, "%v", v)
+		}
 	}
 }
 

@@ -289,9 +289,15 @@ func (app *app) handleMouseEvent(event *tcell.EventMouse) {
 			if target.position.x <= x && target.position.x+target.size.width > x &&
 				target.position.y <= y && target.position.y+target.size.height > y {
 
-				app.send("mouse-target", "path", target.param)
+				app.send("set-current-folder", "root", app.root, "path", target.param)
 				return
 			}
+		}
+	} else if y >= 3 && y < app.screenSize.height-1 {
+		folder := app.curFolder()
+		idx := folder.offsetIdx + y - 3
+		if idx < len(app.entries) {
+			folder.selectedIdx = folder.offsetIdx + y - 3
 		}
 	}
 }

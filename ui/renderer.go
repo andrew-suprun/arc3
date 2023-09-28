@@ -96,7 +96,7 @@ func (app *app) breadcrumbs(b *builder) {
 	for i := 2; i < len(b.widths); i += 2 {
 		app.selectFolderTargets = append(app.selectFolderTargets, target{
 			param:    filepath.Join(path[:i/2]...),
-			position: position{x: 1, y: 1},
+			position: position{x: x, y: 1},
 			size:     size{width: b.widths[i], height: 1},
 		})
 		x += b.widths[i] + b.widths[i+1]
