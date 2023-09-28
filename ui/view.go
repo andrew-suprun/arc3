@@ -11,8 +11,8 @@ type sortColumn int
 
 const (
 	sortByName sortColumn = iota
-	sortBySize
 	sortByTime
+	sortBySize
 )
 
 type folders map[string]map[string]*folder
@@ -39,10 +39,10 @@ func (app *app) sort() {
 	switch folder.sortColumn {
 	case sortByName:
 		app.entries.sortByName()
-	case sortBySize:
-		app.entries.sortBySize()
 	case sortByTime:
 		app.entries.sortByTime()
+	case sortBySize:
+		app.entries.sortBySize()
 	}
 	if !folder.sortAscending[folder.sortColumn] {
 		app.entries.reverse()

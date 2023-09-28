@@ -10,13 +10,15 @@ import (
 )
 
 type builder struct {
-	x, y   int
 	width  int
 	height int
-	field  int
-	widths []int
 	screen tcell.Screen
 	sync   bool
+
+	widths  []int
+	offsets []int
+	x, y    int
+	field   int
 }
 
 type c struct {
@@ -34,7 +36,7 @@ func (b *builder) newLine() {
 	b.field = 0
 }
 
-func (b *builder) layout(constraints ...c) []int {
+func (b *builder) layout(constraints ...c) {
 	b.widths = make([]int, len(constraints))
 	b.field = 0
 	totalSize, totalFlex := 0, 0
@@ -57,7 +59,7 @@ func (b *builder) layout(constraints ...c) []int {
 	}
 
 	if totalFlex == 0 {
-		return b.widths
+		return
 	}
 
 	if totalSize < b.width {
@@ -91,8 +93,11 @@ func (b *builder) layout(constraints ...c) []int {
 			}
 		}
 	}
-
-	return b.widths
+	b.offsets = make([]int, len(b.widths))
+	b.offsets[0] = 0
+	for i := 1; i < len(b.offsets); i++ {
+		b.offsets[i] = b.offsets[i-1] + b.widths[i-1]
+	}
 }
 
 func (b *builder) text(text string, style tcell.Style) {

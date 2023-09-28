@@ -76,7 +76,7 @@ func (app *app) showTitle(b *builder) {
 
 func (app *app) breadcrumbs(b *builder) {
 	b.newLine()
-	app.selectFolderTargets = app.selectFolderTargets[:0]
+	app.folderTargets = app.folderTargets[:0]
 	path := parsePath(app.path)
 	layout := make([]c, 2*len(path)+2)
 	layout[0] = c{size: 5}
@@ -87,17 +87,17 @@ func (app *app) breadcrumbs(b *builder) {
 	}
 	layout[len(layout)-1] = c{size: 1, flex: 1}
 	b.layout(layout...)
-	app.selectFolderTargets = append(app.selectFolderTargets, target{
-		param:    "",
-		position: position{x: 0, y: 1},
-		size:     size{width: b.widths[0], height: 1},
+	app.folderTargets = append(app.folderTargets, folderTarget{
+		param:  "",
+		offset: 0,
+		width:  b.widths[0],
 	})
 	x := b.widths[0] + b.widths[1]
 	for i := 2; i < len(b.widths); i += 2 {
-		app.selectFolderTargets = append(app.selectFolderTargets, target{
-			param:    filepath.Join(path[:i/2]...),
-			position: position{x: x, y: 1},
-			size:     size{width: b.widths[i], height: 1},
+		app.folderTargets = append(app.folderTargets, folderTarget{
+			param:  filepath.Join(path[:i/2]...),
+			offset: b.offsets[i],
+			width:  b.widths[i],
 		})
 		x += b.widths[i] + b.widths[i+1]
 	}
@@ -113,6 +113,22 @@ func (app *app) folderView(b *builder) {
 	b.newLine()
 	folder := app.curFolder()
 	b.layout(c{size: 1}, c{size: 10}, c{size: 3}, c{size: 20, flex: 1}, c{size: 22}, c{size: 19}, c{size: 1})
+	app.sortTargets = make([]sortTarget, 3)
+	app.sortTargets[0] = sortTarget{
+		sortColumn: sortByName,
+		offset:     b.offsets[3],
+		width:      b.widths[3],
+	}
+	app.sortTargets[1] = sortTarget{
+		sortColumn: sortByTime,
+		offset:     b.offsets[4],
+		width:      b.widths[4],
+	}
+	app.sortTargets[2] = sortTarget{
+		sortColumn: sortBySize,
+		offset:     b.offsets[5],
+		width:      b.widths[5],
+	}
 	b.text(" ", styleFolderHeader)
 	b.text("State", styleFolderHeader)
 	b.text("", styleFolderHeader)

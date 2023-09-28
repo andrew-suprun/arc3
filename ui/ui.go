@@ -16,19 +16,20 @@ import (
 )
 
 type app struct {
-	screen              tcell.Screen
-	roots               []string
-	archives            map[string]*archive
-	folders             folders
-	root                string
-	path                string
-	entries             entries
-	screenSize          size
-	selectFolderTargets []target
-	events              io.WriteCloser
-	commands            io.ReadCloser
-	incoming            chan any
-	outgoing            chan string
+	screen        tcell.Screen
+	roots         []string
+	archives      map[string]*archive
+	folders       folders
+	root          string
+	path          string
+	entries       entries
+	screenSize    size
+	folderTargets []folderTarget
+	sortTargets   []sortTarget
+	events        io.WriteCloser
+	commands      io.ReadCloser
+	incoming      chan any
+	outgoing      chan string
 
 	folderUpdateInProgress bool
 	makeSelectedVisible    bool
@@ -36,10 +37,16 @@ type app struct {
 	quit                   bool
 }
 
-type target struct {
-	param string
-	position
-	size
+type folderTarget struct {
+	param  string
+	offset int
+	width  int
+}
+
+type sortTarget struct {
+	sortColumn
+	offset int
+	width  int
 }
 
 type position struct {
@@ -285,12 +292,22 @@ func (app *app) handleMouseEvent(event *tcell.EventMouse) {
 	}
 
 	if y == 1 {
-		for _, target := range app.selectFolderTargets {
-			if target.position.x <= x && target.position.x+target.size.width > x &&
-				target.position.y <= y && target.position.y+target.size.height > y {
-
+		for _, target := range app.folderTargets {
+			if target.offset <= x && target.offset+target.width > x {
 				app.send("set-current-folder", "root", app.root, "path", target.param)
 				return
+			}
+		}
+	} else if y == 2 {
+		for i, target := range app.sortTargets {
+			if target.offset <= x && x < target.offset+target.width {
+				folder := app.curFolder()
+				if folder.sortColumn == target.sortColumn {
+					folder.sortAscending[i] = !folder.sortAscending[i]
+				} else {
+					folder.sortColumn = target.sortColumn
+				}
+				app.sort()
 			}
 		}
 	} else if y >= 3 && y < app.screenSize.height-1 {
