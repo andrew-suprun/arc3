@@ -123,6 +123,7 @@ func Run(screen tcell.Screen) {
 		if root == "--" {
 			break
 		}
+		app.roots = append(app.roots, root)
 		app.archives[root] = &archive{
 			folders: folders{},
 		}
@@ -337,6 +338,16 @@ func (app *app) handleKeyEvent(event *tcell.EventKey) {
 
 	case "Ctrl+C":
 		app.send("stop")
+
+	default:
+		if event.Name() >= "Rune[1]" && event.Name() <= "Rune[9]" {
+			arcIdx := int(event.Name()[5] - '1')
+			if arcIdx < len(app.roots) {
+				root := app.roots[arcIdx]
+				path := app.archives[root].path
+				app.send("set-current-folder", "root", root, "path", path)
+			}
+		}
 	}
 }
 
