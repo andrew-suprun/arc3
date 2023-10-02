@@ -144,16 +144,6 @@ func formatSize(size int) string {
 	return b.String()
 }
 
-func countRune(count int) rune {
-	if count == 0 {
-		return '-'
-	}
-	if count > 9 {
-		return '*'
-	}
-	return '0' + rune(count)
-}
-
 func (f *folder) sortIndicator(column sortColumn) string {
 	if column == f.sortColumn {
 		if f.sortAscending[column] {

@@ -2,7 +2,6 @@ package ui
 
 import (
 	"fmt"
-	"math"
 	"path/filepath"
 	"strings"
 
@@ -193,28 +192,4 @@ func parsePath(strPath string) []string {
 		return path
 	}
 	return nil
-}
-
-func progressBar(value float64, width int) string {
-	if value < 0 || value > 1 {
-		panic(fmt.Sprintf("Invalid progressBar value: %v", value))
-	}
-	if width < 1 {
-		return ""
-	}
-
-	runes := make([]rune, width)
-	progress := int(math.Round(float64(width*8) * float64(value)))
-	idx := 0
-	for ; idx < progress/8; idx++ {
-		runes[idx] = '█'
-	}
-	if progress%8 > 0 {
-		runes[idx] = []rune{' ', '▏', '▎', '▍', '▌', '▋', '▊', '▉'}[progress%8]
-		idx++
-	}
-	for ; idx < int(width); idx++ {
-		runes[idx] = ' '
-	}
-	return string(runes)
 }

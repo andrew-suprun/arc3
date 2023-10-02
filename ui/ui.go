@@ -339,6 +339,24 @@ func (app *app) handleKeyEvent(event *tcell.EventKey) {
 	case "Ctrl+C":
 		app.send("stop")
 
+	case "Ctrl+R":
+		// TODO Resole
+
+	case "Ctrl+A":
+		// TODO Resole All
+
+	case "Tab":
+		// TODO Tab
+
+	case "Backspace2": // Ctrl+Delete
+		// TODO Delete
+
+	case "F10":
+		// TODO Switch Debug On/Off
+
+	case "F12":
+		// TODO Print App State
+
 	default:
 		if event.Name() >= "Rune[1]" && event.Name() <= "Rune[9]" {
 			arcIdx := int(event.Name()[5] - '1')
