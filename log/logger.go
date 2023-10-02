@@ -80,7 +80,7 @@ func printValue(buf *bytes.Buffer, value any) {
 		fmt.Fprintf(buf, "%q", v)
 
 	case []byte:
-		fmt.Fprintf(buf, "%q", string(v))
+		fmt.Fprintf(buf, "%s", string(v))
 
 	case []string:
 		fmt.Fprint(buf, "[")

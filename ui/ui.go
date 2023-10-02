@@ -19,9 +19,7 @@ type app struct {
 	screen        tcell.Screen
 	roots         []string
 	archives      map[string]*archive
-	folders       folders
 	root          string
-	path          string
 	entries       entries
 	screenSize    size
 	folderTargets []folderTarget
@@ -36,6 +34,23 @@ type app struct {
 	sync                   bool
 	quit                   bool
 }
+
+type folder struct {
+	selectedIdx   int
+	offsetIdx     int
+	sortColumn    sortColumn
+	sortAscending []bool
+}
+
+type sortColumn int
+
+const (
+	sortByName sortColumn = iota
+	sortByTime
+	sortBySize
+)
+
+type folders map[string]*folder
 
 type folderTarget struct {
 	param  string
@@ -58,8 +73,33 @@ type size struct {
 }
 
 type archive struct {
+	path       string
+	folders    folders
 	state      archiveState
 	rootFolder *folder
+}
+
+type archiveState int
+
+const (
+	archiveScanning archiveState = iota
+	archiveHashing
+	archiveReady
+	archiveCopying
+)
+
+func (s archiveState) String() string {
+	switch s {
+	case archiveScanning:
+		return "archiveScanning"
+	case archiveHashing:
+		return "archiveHashing"
+	case archiveReady:
+		return "archiveReady"
+	case archiveCopying:
+		return "archiveCopying"
+	}
+	panic("Invalid archiveState")
 }
 
 func Run(screen tcell.Screen) {
@@ -68,7 +108,6 @@ func Run(screen tcell.Screen) {
 	app := &app{
 		screen:   screen,
 		archives: map[string]*archive{},
-		folders:  folders{},
 		commands: commands,
 		events:   events,
 		incoming: make(chan any),
@@ -84,10 +123,14 @@ func Run(screen tcell.Screen) {
 		if root == "--" {
 			break
 		}
+		app.archives[root] = &archive{
+			folders: folders{},
+		}
 		app.send("scan", "root", root)
 	}
 
-	app.send("set-current-folder", "root", os.Args[1], "path", "")
+	app.root = os.Args[1]
+	app.send("set-current-folder", "root", app.root, "path", "")
 
 	app.handleMessages()
 }
@@ -96,8 +139,28 @@ func (app *app) reset() {
 	app.entries = app.entries[:0]
 }
 
+func (app *app) curArchive() *archive {
+	return app.archives[app.root]
+}
+
+func (app *app) curPath() string {
+	return app.curArchive().path
+}
+
+func (app *app) folder(root, path string) *folder {
+	var f *folder
+	var ok bool
+	if f, ok = app.archives[root].folders[app.curPath()]; !ok {
+		f = &folder{
+			sortAscending: []bool{true, true, true},
+		}
+		app.archives[root].folders[app.curPath()] = f
+	}
+	return f
+}
+
 func (app *app) curFolder() *folder {
-	return app.folders.folder(app.root, app.path)
+	return app.folder(app.root, app.curPath())
 }
 
 func (app *app) curEntry() *entry {
@@ -188,7 +251,7 @@ func (app *app) handleCommand(command *parser.Message) {
 	switch command.Type {
 	case "current-folder":
 		app.root = command.StringValue("root")
-		app.path = command.StringValue("path")
+		app.archives[app.root].path = command.StringValue("path")
 		app.reset()
 		app.folderUpdateInProgress = true
 
@@ -253,23 +316,23 @@ func (app *app) handleKeyEvent(event *tcell.EventKey) {
 	case "Right":
 		entry := app.curEntry()
 		if entry.kind == kindFolder {
-			path := filepath.Join(app.path, entry.name)
+			path := filepath.Join(app.curPath(), entry.name)
 			app.send("set-current-folder", "root", app.root, "path", path)
 		}
 
 	case "Left":
-		segments := parsePath(app.path)
+		segments := parsePath(app.curPath())
 		if segments != nil {
 			path := filepath.Join(segments[:len(segments)-1]...)
 			app.send("set-current-folder", "root", app.root, "path", path)
 		}
 
 	case "Ctrl+F":
-		path := filepath.Join(app.root, app.path, app.curEntry().name)
+		path := filepath.Join(app.root, app.curPath(), app.curEntry().name)
 		osexec.Command("open", "-R", path).Start()
 
 	case "Enter":
-		path := filepath.Join(app.root, app.path, app.curEntry().name)
+		path := filepath.Join(app.root, app.curPath(), app.curEntry().name)
 		osexec.Command("open", path).Start()
 
 	case "Ctrl+C":
@@ -322,4 +385,19 @@ func (app *app) handleMouseEvent(event *tcell.EventMouse) {
 func (r *app) send(kind string, params ...any) {
 	msg := parser.String(kind, params...)
 	r.outgoing <- msg
+}
+
+func (app *app) sort() {
+	folder := app.curFolder()
+	switch folder.sortColumn {
+	case sortByName:
+		app.entries.sortByName()
+	case sortByTime:
+		app.entries.sortByTime()
+	case sortBySize:
+		app.entries.sortBySize()
+	}
+	if !folder.sortAscending[folder.sortColumn] {
+		app.entries.reverse()
+	}
 }
