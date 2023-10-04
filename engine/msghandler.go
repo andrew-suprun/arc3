@@ -92,7 +92,7 @@ func (m *model) handleEvent(msg *parser.Message) {
 		m.archives[root].state = archiveReady
 
 		for _, archive := range m.archives {
-			if archive.state == archiveScanning {
+			if archive.state != archiveReady {
 				return
 			}
 		}

@@ -96,7 +96,7 @@ func scanArchive(root string) {
 		name := filepath.Base(file.name)
 
 		if *progress {
-			for progress := 0; progress < file.size; progress += 10000000 {
+			for progress := 0; progress < file.size; progress += 50000000 {
 				if quit {
 					return
 				}
