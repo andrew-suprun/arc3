@@ -11,6 +11,7 @@ import (
 	osexec "os/exec"
 	"path/filepath"
 	"runtime/debug"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -28,6 +29,7 @@ type app struct {
 	commands      io.ReadCloser
 	incoming      chan any
 	outgoing      chan string
+	lastClickTime time.Time
 
 	folderUpdateInProgress bool
 	makeSelectedVisible    bool
@@ -323,6 +325,7 @@ func (app *app) handleKeyEvent(event *tcell.EventKey) {
 
 	case "Left":
 		segments := parsePath(app.curPath())
+		log.Debug("left", "segments", segments)
 		if segments != nil {
 			path := filepath.Join(segments[:len(segments)-1]...)
 			app.send("set-current-folder", "root", app.root, "path", path)
@@ -404,10 +407,19 @@ func (app *app) handleMouseEvent(event *tcell.EventMouse) {
 		}
 	} else if y >= 3 && y < app.screenSize.height-1 {
 		folder := app.curFolder()
+		curSelectedIdx := folder.selectedIdx
 		idx := folder.offsetIdx + y - 3
 		if idx < len(app.entries) {
 			folder.selectedIdx = folder.offsetIdx + y - 3
 		}
+		if curSelectedIdx == folder.selectedIdx && time.Since(app.lastClickTime).Milliseconds() < 500 {
+			entry := app.curEntry()
+			if entry.kind == kindFolder {
+				path := filepath.Join(app.curPath(), entry.name)
+				app.send("set-current-folder", "root", app.root, "path", path)
+			}
+		}
+		app.lastClickTime = time.Now()
 	}
 }
 
