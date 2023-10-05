@@ -105,7 +105,13 @@ func (s archiveState) String() string {
 }
 
 func Run(screen tcell.Screen) {
-	commands, events := exec.Start()
+	engine := os.Getenv("ARC_ENGINE")
+	if engine == "" {
+		executable, _ := os.Executable()
+		dir := filepath.Dir(executable)
+		engine = filepath.Join(dir, "engine")
+	}
+	commands, events := exec.Start(engine)
 
 	app := &app{
 		screen:   screen,
